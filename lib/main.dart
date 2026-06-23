@@ -1,7 +1,9 @@
-import 'package:excelerate_pathfinder/screens/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'seeds/programme_seed.dart';
+
 import 'firebase_options.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -9,6 +11,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+   await seedProgrammes();
 
   runApp(const ExcelerateApp());
 }
@@ -21,12 +24,15 @@ class ExcelerateApp extends StatelessWidget {
     return MaterialApp(
       title: 'Excelerate Pathfinder',
       debugShowCheckedModeBanner: false,
+
       theme: ThemeData(
         primaryColor: const Color(0xFFE0194A),
         scaffoldBackgroundColor: const Color(0xFFF7F7F7),
         fontFamily: 'Roboto',
       ),
-       home: const SplashScreen(),
+
+      // Start app here
+      home: const SplashScreen(),
     );
   }
 }

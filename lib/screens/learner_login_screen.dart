@@ -1,8 +1,13 @@
-// lib/screens/learner_signup_screen.dart
+// lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'learner_login_screen.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'learner_home_screen.dart';
+import 'learner_onboarding_quiz_screen.dart';
+import 'learner_signup_screen.dart';
+import 'learner_forgot_password_screen.dart';
+
 
 // ─── Color constants ────────────────────────────────────────────────────
 const kAuthPrimary = Color(0xFF5E35B1);
@@ -15,75 +20,53 @@ const kAuthBlobLavender = Color(0xFFEDE7F6);
 const kAuthError = Color(0xFFD32F2F);
 const kAuthSuccess = Color(0xFF2E7D32);
 
+const String kWebClientId =
+    '485243538959-ko29fn8camgj9el2e02t6ad31oi4t5pg.apps.googleusercontent.com';
+
 // ============================================================
-//  SIGNUP SCREEN
+//  LOGIN SCREEN
 // ============================================================
-class SignupScreen extends StatefulWidget {
-  const SignupScreen({super.key});
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
 
   @override
-  State<SignupScreen> createState() => _SignupScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen>
+class _LoginScreenState extends State<LoginScreen>
     with TickerProviderStateMixin {
-  // Controllers
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-
-  // Focus nodes
-  final _nameFocus = FocusNode();
-  final _phoneFocus = FocusNode();
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
-  final _confirmPasswordFocus = FocusNode();
 
-  // UI state
   bool _obscurePassword = true;
-  bool _obscureConfirm = true;
-  bool _agreeTerms = false;
+  bool _keepSignedIn = false;
   bool _submitting = false;
 
-  // Logo animations
+  // Logo animations (scale + glow, no rotation)
   late final AnimationController _logoScaleController;
   late final AnimationController _logoGlowController;
   late final Animation<double> _logoScale;
   late final Animation<double> _logoGlow;
 
-  // Focus states
-  bool _nameFocused = false;
-  bool _phoneFocused = false;
   bool _emailFocused = false;
   bool _passwordFocused = false;
-  bool _confirmFocused = false;
 
-  // Validation
-  String? _nameError;
-  String? _phoneError;
   String? _emailError;
   String? _passwordError;
-  String? _confirmError;
-
-  bool _nameTouched = false;
-  bool _phoneTouched = false;
   bool _emailTouched = false;
   bool _passwordTouched = false;
-  bool _confirmTouched = false;
 
-  // Email regex
   static final RegExp _emailRegex = RegExp(
     r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
   );
-  // Phone regex
-  static final RegExp _phoneRegex = RegExp(r'^\+?[\d\s\-\(\)]{10,15}$');
 
   @override
   void initState() {
     super.initState();
 
+    // ✅ Logo scale animation (entrance)
     _logoScaleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
@@ -93,6 +76,7 @@ class _SignupScreenState extends State<SignupScreen>
       curve: Curves.elasticOut,
     );
 
+    // ✅ Logo glow pulse
     _logoGlowController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
@@ -101,89 +85,55 @@ class _SignupScreenState extends State<SignupScreen>
       CurvedAnimation(parent: _logoGlowController, curve: Curves.easeInOut),
     );
 
+    // ✅ Start entrance animation
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _logoScaleController.forward();
     });
 
-    _nameFocus.addListener(() {
-      if (mounted) setState(() => _nameFocused = _nameFocus.hasFocus);
-    });
-    _phoneFocus.addListener(() {
-      if (mounted) setState(() => _phoneFocused = _phoneFocus.hasFocus);
-    });
-    _emailFocus.addListener(() {
-      if (mounted) setState(() => _emailFocused = _emailFocus.hasFocus);
-    });
-    _passwordFocus.addListener(() {
-      if (mounted) setState(() => _passwordFocused = _passwordFocus.hasFocus);
-    });
-    _confirmPasswordFocus.addListener(() {
-      if (mounted) setState(() => _confirmFocused = _confirmPasswordFocus.hasFocus);
-    });
-
-    _nameController.addListener(_onNameChanged);
-    _phoneController.addListener(_onPhoneChanged);
+    _emailFocus.addListener(_onEmailFocusChange);
+    _passwordFocus.addListener(_onPasswordFocusChange);
     _emailController.addListener(_onEmailChanged);
     _passwordController.addListener(_onPasswordChanged);
-    _confirmPasswordController.addListener(_onConfirmChanged);
   }
 
   @override
   void dispose() {
-    _nameController.removeListener(_onNameChanged);
-    _phoneController.removeListener(_onPhoneChanged);
     _emailController.removeListener(_onEmailChanged);
     _passwordController.removeListener(_onPasswordChanged);
-    _confirmPasswordController.removeListener(_onConfirmChanged);
-
-    _nameController.dispose();
-    _phoneController.dispose();
+    _emailFocus.removeListener(_onEmailFocusChange);
+    _passwordFocus.removeListener(_onPasswordFocusChange);
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    _nameFocus.dispose();
-    _phoneFocus.dispose();
     _emailFocus.dispose();
     _passwordFocus.dispose();
-    _confirmPasswordFocus.dispose();
     _logoScaleController.dispose();
     _logoGlowController.dispose();
     super.dispose();
   }
 
   // ============================================================
-  //  VALIDATION HANDLERS
+  //  FOCUS LISTENERS
   // ============================================================
-  void _onNameChanged() {
-    if (!_nameTouched) _nameTouched = true;
-    final value = _nameController.text.trim();
-    if (value.isEmpty) {
-      setState(() => _nameError = null);
-    } else if (value.length < 2) {
-      setState(() => _nameError = 'Name must be at least 2 characters');
-    } else {
-      setState(() => _nameError = null);
-    }
+  void _onEmailFocusChange() {
+    if (!mounted) return;
+    setState(() => _emailFocused = _emailFocus.hasFocus);
   }
 
-  void _onPhoneChanged() {
-    if (!_phoneTouched) _phoneTouched = true;
-    final value = _phoneController.text.trim();
-    if (value.isEmpty) {
-      setState(() => _phoneError = null);
-    } else if (!_phoneRegex.hasMatch(value)) {
-      setState(() => _phoneError = 'Enter a valid phone number');
-    } else {
-      setState(() => _phoneError = null);
-    }
+  void _onPasswordFocusChange() {
+    if (!mounted) return;
+    setState(() => _passwordFocused = _passwordFocus.hasFocus);
   }
 
   void _onEmailChanged() {
-    if (!_emailTouched) _emailTouched = true;
+    if (!_emailTouched) {
+      _emailTouched = true;
+    }
     final value = _emailController.text.trim();
     if (value.isEmpty) {
       setState(() => _emailError = null);
-    } else if (!_emailRegex.hasMatch(value)) {
+      return;
+    }
+    if (!_emailRegex.hasMatch(value)) {
       setState(() => _emailError = 'Please enter a valid email address');
     } else {
       setState(() => _emailError = null);
@@ -191,118 +141,79 @@ class _SignupScreenState extends State<SignupScreen>
   }
 
   void _onPasswordChanged() {
-    if (!_passwordTouched) _passwordTouched = true;
+    if (!_passwordTouched) {
+      _passwordTouched = true;
+    }
     final value = _passwordController.text;
     if (value.isEmpty) {
-      setState(() {
-        _passwordError = null;
-      });
-    } else if (value.length < 6) {
+      setState(() => _passwordError = null);
+      return;
+    }
+    if (value.length < 6) {
       setState(() => _passwordError = 'Password must be at least 6 characters');
     } else {
       setState(() => _passwordError = null);
     }
-
-    if (_confirmPasswordController.text.isNotEmpty) {
-      _onConfirmChanged();
-    }
-  }
-
-  void _onConfirmChanged() {
-    if (!_confirmTouched) _confirmTouched = true;
-    final value = _confirmPasswordController.text;
-    if (value.isEmpty) {
-      setState(() => _confirmError = null);
-    } else if (value != _passwordController.text) {
-      setState(() => _confirmError = 'Passwords do not match');
-    } else {
-      setState(() => _confirmError = null);
-    }
   }
 
   bool _isFormValid() {
-    return _nameController.text.trim().length >= 2 &&
-        _phoneRegex.hasMatch(_phoneController.text.trim()) &&
-        _emailRegex.hasMatch(_emailController.text.trim()) &&
-        _passwordController.text.length >= 6 &&
-        _confirmPasswordController.text == _passwordController.text &&
-        _passwordController.text.isNotEmpty;
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    return _emailRegex.hasMatch(email) && password.length >= 6;
   }
 
   // ============================================================
-  //  PASSWORD STRENGTH
+  //  CHECK ONBOARDING STATUS & NAVIGATE
   // ============================================================
-  double _passwordStrength() {
-    final p = _passwordController.text;
-    if (p.isEmpty) return 0.0;
-    double strength = 0;
-    if (p.length >= 6) strength += 0.25;
-    if (p.length >= 10) strength += 0.15;
-    if (p.contains(RegExp(r'[A-Z]'))) strength += 0.2;
-    if (p.contains(RegExp(r'[a-z]'))) strength += 0.2;
-    if (p.contains(RegExp(r'[0-9]'))) strength += 0.1;
-    if (p.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) strength += 0.1;
-    return strength.clamp(0.0, 1.0);
-  }
+  Future<void> _checkOnboardingAndNavigate(String uid) async {
+    try {
+      final db = FirebaseFirestore.instance;
+      final userDocRef = db.collection('users').doc(uid);
+      final userDoc = await userDocRef.get();
 
-  String _passwordStrengthLabel() {
-    final s = _passwordStrength();
-    if (s == 0) return '';
-    if (s < 0.4) return 'Weak';
-    if (s < 0.7) return 'Medium';
-    return 'Strong';
-  }
+      if (!mounted) return;
 
-  Color _passwordStrengthColor() {
-    final s = _passwordStrength();
-    if (s == 0) return Colors.transparent;
-    if (s < 0.4) return kAuthError;
-    if (s < 0.7) return const Color(0xFFF59E0B);
-    return kAuthSuccess;
-  }
+      if (userDoc.exists) {
+        final userData = userDoc.data() as Map<String, dynamic>;
+        final onboardingCompleted = userData['onboardingCompleted'] ?? false;
 
-  // ============================================================
-  //  NAVIGATION
-  // ============================================================
-  void _goBack() {
-    if (Navigator.canPop(context)) {
-      Navigator.pop(context);
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+        if (onboardingCompleted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const LearnerHomeScreen()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const OnboardingQuizScreen()),
+          );
+        }
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const OnboardingQuizScreen()),
+        );
+      }
+    } catch (e) {
+      debugPrint('Onboarding check error: $e');
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LearnerHomeScreen()),
+        );
+      }
     }
   }
 
   // ============================================================
-  //  SIGNUP HANDLER - ✅ CHANGED: Goes to Login after signup
+  //  EMAIL/PASSWORD SIGN IN
   // ============================================================
-  Future<void> _handleSignup() async {
+  Future<void> _handleLogin() async {
     setState(() {
-      _nameTouched = true;
-      _phoneTouched = true;
       _emailTouched = true;
       _passwordTouched = true;
-      _confirmTouched = true;
     });
 
-    if (_nameController.text.trim().isEmpty) {
-      setState(() => _nameError = 'Name is required');
-      return;
-    }
-    if (_nameController.text.trim().length < 2) {
-      setState(() => _nameError = 'Name must be at least 2 characters');
-      return;
-    }
-    if (_phoneController.text.trim().isEmpty) {
-      setState(() => _phoneError = 'Phone number is required');
-      return;
-    }
-    if (!_phoneRegex.hasMatch(_phoneController.text.trim())) {
-      setState(() => _phoneError = 'Enter a valid phone number');
-      return;
-    }
     if (_emailController.text.trim().isEmpty) {
       setState(() => _emailError = 'Email is required');
       return;
@@ -319,79 +230,50 @@ class _SignupScreenState extends State<SignupScreen>
       setState(() => _passwordError = 'Password must be at least 6 characters');
       return;
     }
-    if (_passwordController.text != _confirmPasswordController.text) {
-      setState(() => _confirmError = 'Passwords do not match');
-      return;
-    }
-    if (!_agreeTerms) {
-      _showError('Please agree to Terms of Service');
-      return;
-    }
 
     setState(() => _submitting = true);
     try {
-      final credential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
-      await credential.user
-          ?.updateDisplayName(_nameController.text.trim());
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final db = FirebaseFirestore.instance;
+        final userDocRef = db.collection('users').doc(user.uid);
+        final userDoc = await userDocRef.get();
 
-      if (credential.user != null) {
-        await _createFirestoreUserDoc(
-          uid: credential.user!.uid,
-          email: _emailController.text.trim(),
-          name: _nameController.text.trim(),
-          phone: _phoneController.text.trim(),
-        );
-      }
+        if (!userDoc.exists) {
+          await _createFirestoreUserDoc(
+            uid: user.uid,
+            email: user.email ?? '',
+            name: user.displayName ?? 'User',
+            phone: user.phoneNumber ?? '',
+            photoURL: user.photoURL,
+          );
+        } else {
+          await userDocRef.update({
+            'lastActiveAt': FieldValue.serverTimestamp(),
+          });
+        }
 
-      // ✅ CHANGED: Sign out the user, then go to Login screen
-      // This forces them to login manually after signup
-      await FirebaseAuth.instance.signOut();
-
-      if (mounted) {
-        // ✅ Navigate to Login Screen (not Home)
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
-
-        // ✅ Show success snackbar on the login screen
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: const [
-                Icon(Icons.check_circle, color: Colors.white, size: 20),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    '🎉 Account created successfully! Please sign in.',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: kAuthSuccess,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        await _checkOnboardingAndNavigate(user.uid);
       }
     } on FirebaseAuthException catch (e) {
-      String errorMsg = 'Signup failed';
-      if (e.code == 'email-already-in-use') {
-        errorMsg = 'Account already exists. Please sign in.';
-      } else if (e.code == 'weak-password') {
-        errorMsg = 'Password is too weak. Use 6+ characters.';
+      String errorMsg = 'Login failed';
+      if (e.code == 'user-not-found') {
+        errorMsg = 'No account found. Please sign up first.';
+      } else if (e.code == 'wrong-password') {
+        errorMsg = 'Incorrect password. Try again.';
       } else if (e.code == 'invalid-email') {
         errorMsg = 'Invalid email address.';
+      } else if (e.code == 'user-disabled') {
+        errorMsg = 'This account has been disabled.';
+      } else if (e.code == 'invalid-credential') {
+        errorMsg = 'Invalid email or password.';
+      } else if (e.code == 'too-many-requests') {
+        errorMsg = 'Too many attempts. Try again later.';
       } else if (e.message != null) {
         errorMsg = e.message!;
       }
@@ -404,22 +286,133 @@ class _SignupScreenState extends State<SignupScreen>
   }
 
   // ============================================================
-  //  FIRESTORE USER DOC CREATION
+  //  GOOGLE SIGN IN
+  // ============================================================
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _submitting = true);
+    try {
+      final GoogleSignIn googleSignIn =  GoogleSignIn(
+        scopes: ['email'],
+      );
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) {
+        setState(() => _submitting = false);
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+      await googleUser.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential =
+      await FirebaseAuth.instance.signInWithCredential(credential);
+
+      final db = FirebaseFirestore.instance;
+      final userDocRef = db.collection('users').doc(userCredential.user!.uid);
+      final userDoc = await userDocRef.get();
+
+      if (!userDoc.exists) {
+        await _createFirestoreUserDoc(
+          uid: userCredential.user!.uid,
+          email: userCredential.user!.email ?? '',
+          name: userCredential.user!.displayName ?? 'New User',
+          phone: userCredential.user!.phoneNumber ?? '',
+          photoURL: userCredential.user!.photoURL,
+        );
+      } else {
+        await userDocRef.update({
+          'lastActiveAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      await _checkOnboardingAndNavigate(userCredential.user!.uid);
+    } on FirebaseAuthException catch (e) {
+      _showError('Google sign-in failed: ${e.message}');
+    } catch (e) {
+      _showError('Error: ${e.toString()}');
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  // ============================================================
+  //  GITHUB SIGN IN
+  // ============================================================
+  Future<void> _handleGitHubSignIn() async {
+    setState(() => _submitting = true);
+    try {
+      GithubAuthProvider githubProvider = GithubAuthProvider();
+      githubProvider.addScope('user:email');
+
+      final userCredential =
+      await FirebaseAuth.instance.signInWithPopup(githubProvider);
+
+      final db = FirebaseFirestore.instance;
+      final userDocRef = db.collection('users').doc(userCredential.user!.uid);
+      final userDoc = await userDocRef.get();
+
+      if (!userDoc.exists) {
+        await _createFirestoreUserDoc(
+          uid: userCredential.user!.uid,
+          email: userCredential.user!.email ?? '',
+          name: userCredential.user!.displayName ?? 'New User',
+          phone: userCredential.user!.phoneNumber ?? '',
+          photoURL: userCredential.user!.photoURL,
+        );
+      } else {
+        await userDocRef.update({
+          'lastActiveAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      await _checkOnboardingAndNavigate(userCredential.user!.uid);
+    } on FirebaseAuthException catch (e) {
+      String errorMsg = 'GitHub sign-in failed';
+      if (e.code == 'account-exists-with-different-credential') {
+        errorMsg = 'Account exists with different sign-in method.';
+      } else if (e.message != null) {
+        errorMsg = e.message!;
+      }
+      _showError(errorMsg);
+    } catch (e) {
+      _showError('Error: ${e.toString()}');
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  // ============================================================
+  //  HELPER: Create Firestore user documents
   // ============================================================
   Future<void> _createFirestoreUserDoc({
     required String uid,
     required String email,
     required String name,
     required String phone,
+    String? photoURL,
   }) async {
     final db = FirebaseFirestore.instance;
+    final userDocRef = db.collection('users').doc(uid);
 
-    await db.collection('users').doc(uid).set({
+    final doc = await userDocRef.get();
+    if (doc.exists) {
+      await userDocRef.update({
+        'lastActiveAt': FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    await userDocRef.set({
       'uid': uid,
       'email': email,
       'displayName': name,
       'phone': phone,
-      'photoURL': null,
+      'photoURL': photoURL,
       'role': 'learner',
       'title': 'Learner',
       'tier': 'Velocity Tier 1',
@@ -460,8 +453,22 @@ class _SignupScreenState extends State<SignupScreen>
   }
 
   // ============================================================
-  //  ERROR TOAST
+  //  NAVIGATION
   // ============================================================
+  void _handleForgotPassword() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+    );
+  }
+
+  void _handleSignUp() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SignupScreen()),
+    );
+  }
+
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -485,13 +492,13 @@ class _SignupScreenState extends State<SignupScreen>
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
               child: Container(
                 constraints: const BoxConstraints(maxWidth: 460),
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 36),
+                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 30,
                       offset: const Offset(0, 10),
                     ),
@@ -500,98 +507,72 @@ class _SignupScreenState extends State<SignupScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: IconButton(
-                        onPressed: _goBack,
-                        icon: const Icon(Icons.arrow_back, color: kAuthPrimary),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
+                    // ✅ Animated Logo
                     Center(child: _buildAnimatedLogo()),
                     const SizedBox(height: 16),
 
+                    // ✅ Brand Title "Excelerate" + "PATHFINDER" (regular text)
                     Center(child: _buildBrandTitle()),
-                    const SizedBox(height: 8),
-                    const Center(
-                      child: Text('Start Your Path',
-                          style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.black,
-                              letterSpacing: -0.3)),
-                    ),
-                    const SizedBox(height: 4),
-                    const Center(
-                      child: Text('Create your free account',
-                          style: TextStyle(
-                              fontSize: 13, color: Colors.black54)),
-                    ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 36),
 
-                    // Full Name
-                    _buildLabel('FULL NAME'),
-                    const SizedBox(height: 8),
-                    _buildTextField(
-                      controller: _nameController,
-                      focusNode: _nameFocus,
-                      hint: 'Enter your full name',
-                      icon: Icons.person_outline,
-                      focused: _nameFocused,
-                      errorText: _nameError,
-                      textInputAction: TextInputAction.next,
-                      onSubmitted: (_) => _phoneFocus.requestFocus(),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Phone
-                    _buildLabel('PHONE NUMBER'),
-                    const SizedBox(height: 8),
-                    _buildTextField(
-                      controller: _phoneController,
-                      focusNode: _phoneFocus,
-                      hint: 'Enter phone number',
-                      icon: Icons.phone_outlined,
-                      keyboardType: TextInputType.phone,
-                      focused: _phoneFocused,
-                      errorText: _phoneError,
-                      textInputAction: TextInputAction.next,
-                      onSubmitted: (_) => _emailFocus.requestFocus(),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Email
-                    _buildLabel('EMAIL ADDRESS'),
+                    // Email Field
+                    const Text('EMAIL ADDRESS',
+                        style: TextStyle(
+                          fontSize: 11,
+                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.w500,
+                        )),
                     const SizedBox(height: 8),
                     _buildTextField(
                       controller: _emailController,
                       focusNode: _emailFocus,
-                      hint: 'Enter your mail-ID ',
+                      hint: 'Enter your mail-ID',
                       icon: Icons.mail_outline,
-                      keyboardType: TextInputType.emailAddress,
                       focused: _emailFocused,
                       errorText: _emailError,
+                      keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
                       onSubmitted: (_) => _passwordFocus.requestFocus(),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
-                    // Password
-                    _buildLabel('PASSWORD'),
+                    // Password Field
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('PASSWORD',
+                            style: TextStyle(
+                              fontSize: 11,
+                              letterSpacing: 1.2,
+                              fontWeight: FontWeight.w500,
+                            )),
+                        MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: _handleForgotPassword,
+                            child: const Text(
+                              'Forgot Password',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: kAuthPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 8),
                     _buildTextField(
                       controller: _passwordController,
                       focusNode: _passwordFocus,
                       hint: '••••••••',
                       icon: Icons.lock_outline,
-                      obscure: _obscurePassword,
                       focused: _passwordFocused,
                       errorText: _passwordError,
-                      textInputAction: TextInputAction.next,
-                      onSubmitted: (_) => _confirmPasswordFocus.requestFocus(),
+                      obscure: _obscurePassword,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _handleLogin(),
                       suffixIcon: MouseRegion(
                         cursor: SystemMouseCursors.click,
                         child: IconButton(
@@ -607,73 +588,9 @@ class _SignupScreenState extends State<SignupScreen>
                         ),
                       ),
                     ),
-
-                    // Password strength bar
-                    if (_passwordController.text.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(99),
-                              child: LinearProgressIndicator(
-                                value: _passwordStrength(),
-                                minHeight: 4,
-                                backgroundColor: kAuthFieldBg,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  _passwordStrengthColor(),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _passwordStrengthLabel(),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: _passwordStrengthColor(),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-
                     const SizedBox(height: 16),
 
-                    // Confirm Password
-                    _buildLabel('CONFIRM PASSWORD'),
-                    const SizedBox(height: 8),
-                    _buildTextField(
-                      controller: _confirmPasswordController,
-                      focusNode: _confirmPasswordFocus,
-                      hint: '••••••••',
-                      icon: Icons.lock_outline,
-                      obscure: _obscureConfirm,
-                      focused: _confirmFocused,
-                      errorText: _confirmError,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => _handleSignup(),
-                      suffixIcon: MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: IconButton(
-                          icon: Icon(
-                            _obscureConfirm
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            color: kAuthAccent,
-                            size: 20,
-                          ),
-                          onPressed: () => setState(
-                                  () => _obscureConfirm = !_obscureConfirm),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Terms agreement
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         MouseRegion(
                           cursor: SystemMouseCursors.click,
@@ -681,113 +598,135 @@ class _SignupScreenState extends State<SignupScreen>
                             width: 20,
                             height: 20,
                             child: Checkbox(
-                              value: _agreeTerms,
+                              value: _keepSignedIn,
                               onChanged: (v) =>
-                                  setState(() => _agreeTerms = v ?? false),
+                                  setState(() => _keepSignedIn = v ?? false),
                               activeColor: kAuthAccent,
                               side: const BorderSide(
                                   color: kAuthAccent, width: 1.2),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(3),
+                              ),
                             ),
                           ),
                         ),
                         const SizedBox(width: 10),
-                        Expanded(
-                          child: RichText(
-                            text: const TextSpan(
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.black87),
-                              children: [
-                                TextSpan(text: 'I agree to the '),
-                                WidgetSpan(
-                                  child: MouseRegion(
-                                    cursor: SystemMouseCursors.click,
-                                    child: const Text(
-                                      'Terms of Service',
-                                      style: TextStyle(
-                                          color: kAuthAccent,
-                                          fontWeight: FontWeight.w600),
-                                    ),
-                                  ),
-                                ),
-                                TextSpan(text: ' & '),
-                                WidgetSpan(
-                                  child: MouseRegion(
-                                    cursor: SystemMouseCursors.click,
-                                    child: const Text(
-                                      'Privacy Policy',
-                                      style: TextStyle(
-                                          color: kAuthAccent,
-                                          fontWeight: FontWeight.w600),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                        const Text(
+                          'Keep me signed in for 30 days',
+                          style: TextStyle(fontSize: 13),
                         ),
                       ],
                     ),
                     const SizedBox(height: 24),
 
-                    // Create Account Button
+                    // Sign In Button
                     SizedBox(
                       height: 54,
                       child: ElevatedButton(
                         onPressed: (_submitting || !_isFormValid())
                             ? null
-                            : _handleSignup,
+                            : _handleLogin,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: kAuthPrimary,
                           disabledBackgroundColor:
-                          kAuthPrimary.withOpacity(0.4),
+                          kAuthPrimary.withValues(alpha: 0.4),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           elevation: 0,
                         ),
                         child: _submitting
                             ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2))
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
                             : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
-                            Icon(Icons.person_add,
+                            Icon(Icons.login,
                                 color: Colors.white, size: 20),
                             SizedBox(width: 10),
-                            Text('Create Account',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w600)),
+                            Text(
+                              'Sign In',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                     ),
+                    const SizedBox(height: 28),
+
+                    Row(
+                      children: [
+                        const Expanded(child: Divider(color: kAuthAccent)),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'OR CONTINUE WITH',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.black.withValues(alpha: 0.5),
+                              letterSpacing: 1.2,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        const Expanded(child: Divider(color: kAuthAccent)),
+                      ],
+                    ),
                     const SizedBox(height: 24),
 
-                    // Sign in link
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildSocialButton(
+                            label: 'Google',
+                            icon: const Text('G',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18)),
+                            onPressed:
+                            _submitting ? null : _handleGoogleSignIn,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildSocialButton(
+                            label: 'GitHub',
+                            icon: const Icon(Icons.code, size: 20),
+                            onPressed:
+                            _submitting ? null : _handleGitHubSignIn,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 28),
+
                     Center(
                       child: MouseRegion(
                         cursor: SystemMouseCursors.click,
                         child: GestureDetector(
-                          onTap: () => Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const LoginScreen()),
-                          ),
+                          onTap: _handleSignUp,
                           child: RichText(
                             text: const TextSpan(
                               style: TextStyle(
                                   fontSize: 13, color: Colors.black87),
                               children: [
-                                TextSpan(text: 'Already have an account? '),
+                                TextSpan(text: "Don't have an account? "),
                                 TextSpan(
-                                  text: 'Sign in',
+                                  text: 'Start your path',
                                   style: TextStyle(
-                                      color: kAuthAccentDark,
-                                      fontWeight: FontWeight.w600),
+                                    color: kAuthAccentDark,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ],
                             ),
@@ -806,7 +745,7 @@ class _SignupScreenState extends State<SignupScreen>
   }
 
   // ═══════════════════════════════════════════════════════════════
-  //  ANIMATED LOGO
+  //  ✅ ANIMATED LOGO (scale + glow, no rotation)
   // ═══════════════════════════════════════════════════════════════
   Widget _buildAnimatedLogo() {
     return AnimatedBuilder(
@@ -818,27 +757,29 @@ class _SignupScreenState extends State<SignupScreen>
         return Transform.scale(
           scale: _logoScale.value,
           child: SizedBox(
-            width: 80,
-            height: 80,
+            width: 90,
+            height: 90,
             child: Stack(
               alignment: Alignment.center,
               children: [
+                // Pulsing glow background
                 Container(
-                  width: 70 + (_logoGlow.value * 10),
-                  height: 70 + (_logoGlow.value * 10),
+                  width: 76 + (_logoGlow.value * 12),
+                  height: 76 + (_logoGlow.value * 12),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        kAuthAccentDark.withOpacity(_logoGlow.value * 0.4),
-                        kAuthAccentDark.withOpacity(0.0),
+                        kAuthAccentDark.withValues(alpha: _logoGlow.value * 0.4),
+                        kAuthAccentDark.withValues(alpha: 0.0),
                       ],
                     ),
                   ),
                 ),
+                // Main logo body
                 Container(
-                  width: 64,
-                  height: 64,
+                  width: 72,
+                  height: 72,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: const LinearGradient(
@@ -848,8 +789,8 @@ class _SignupScreenState extends State<SignupScreen>
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: kAuthAccentDark.withOpacity(0.4),
-                        blurRadius: 10,
+                        color: kAuthAccentDark.withValues(alpha: 0.4),
+                        blurRadius: 12,
                         spreadRadius: 1,
                       ),
                     ],
@@ -858,7 +799,7 @@ class _SignupScreenState extends State<SignupScreen>
                     child: Icon(
                       Icons.rocket_launch_rounded,
                       color: Colors.white,
-                      size: 32,
+                      size: 36,
                     ),
                   ),
                 ),
@@ -871,12 +812,13 @@ class _SignupScreenState extends State<SignupScreen>
   }
 
   // ═══════════════════════════════════════════════════════════════
-  //  BRAND TITLE
+  //  ✅ BRAND TITLE - Regular "E" + "xcelerate" + "PATHFINDER" pill
   // ═══════════════════════════════════════════════════════════════
   Widget _buildBrandTitle() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // ✅ Regular "Excelerate" text (normal E character)
         const Text(
           'Excelerate',
           style: TextStyle(
@@ -888,10 +830,11 @@ class _SignupScreenState extends State<SignupScreen>
           ),
         ),
         const SizedBox(height: 4),
+        // "PATHFINDER" pill badge
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
           decoration: BoxDecoration(
-            color: kAuthAccentDark.withOpacity(0.08),
+            color: kAuthAccentDark.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Text(
@@ -906,17 +849,6 @@ class _SignupScreenState extends State<SignupScreen>
         ),
       ],
     );
-  }
-
-  // ============================================================
-  //  LABEL
-  // ============================================================
-  Widget _buildLabel(String text) {
-    return Text(text,
-        style: const TextStyle(
-            fontSize: 11,
-            letterSpacing: 1.2,
-            fontWeight: FontWeight.w500));
   }
 
   // ============================================================
@@ -948,7 +880,7 @@ class _SignupScreenState extends State<SignupScreen>
       iconColor = kAuthPrimary;
     } else {
       borderColor = kAuthAccent;
-      bgColor = kAuthFieldBg.withOpacity(0.5);
+      bgColor = kAuthFieldBg.withValues(alpha: 0.5);
       iconColor = kAuthAccent;
     }
 
@@ -968,7 +900,7 @@ class _SignupScreenState extends State<SignupScreen>
             boxShadow: focused
                 ? [
               BoxShadow(
-                color: kAuthPrimary.withOpacity(0.12),
+                color: kAuthPrimary.withValues(alpha: 0.12),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -986,7 +918,7 @@ class _SignupScreenState extends State<SignupScreen>
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(
-                color: Colors.black.withOpacity(0.35),
+                color: Colors.black.withValues(alpha: 0.35),
                 fontSize: 14,
               ),
               prefixIcon: Padding(
@@ -1006,7 +938,7 @@ class _SignupScreenState extends State<SignupScreen>
               suffixIcon: suffixIcon,
               border: InputBorder.none,
               contentPadding:
-              const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+              const EdgeInsets.symmetric(horizontal: 8, vertical: 18),
             ),
           ),
         ),
@@ -1015,8 +947,7 @@ class _SignupScreenState extends State<SignupScreen>
             padding: const EdgeInsets.only(left: 12, top: 6),
             child: Row(
               children: [
-                const Icon(Icons.error_outline,
-                    size: 13, color: kAuthError),
+                const Icon(Icons.error_outline, size: 13, color: kAuthError),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
@@ -1032,6 +963,39 @@ class _SignupScreenState extends State<SignupScreen>
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildSocialButton({
+    required String label,
+    required Widget icon,
+    required VoidCallback? onPressed,
+  }) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        side: const BorderSide(color: kAuthAccent, width: 1.2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        backgroundColor: Colors.white,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          icon,
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 15,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1056,10 +1020,12 @@ class _GradientBackground extends StatelessWidget {
             height: 380,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: RadialGradient(colors: [
-                kAuthBlobPink.withOpacity(0.7),
-                kAuthBlobPink.withOpacity(0.0)
-              ]),
+              gradient: RadialGradient(
+                colors: [
+                  kAuthBlobPink.withValues(alpha: 0.7),
+                  kAuthBlobPink.withValues(alpha: 0.0),
+                ],
+              ),
             ),
           ),
         ),
@@ -1071,10 +1037,12 @@ class _GradientBackground extends StatelessWidget {
             height: 400,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: RadialGradient(colors: [
-                const Color(0xFFF8BBD0).withOpacity(0.4),
-                const Color(0xFFF8BBD0).withOpacity(0.0)
-              ]),
+              gradient: RadialGradient(
+                colors: [
+                  const Color(0xFFF8BBD0).withValues(alpha: 0.4),
+                  const Color(0xFFF8BBD0).withValues(alpha: 0.0),
+                ],
+              ),
             ),
           ),
         ),
@@ -1089,14 +1057,14 @@ class _GradientBackground extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  kAuthBlobLavender.withOpacity(0.35),
-                  kAuthBlobLavender.withOpacity(0.0)
+                  kAuthBlobLavender.withValues(alpha: 0.35),
+                  kAuthBlobLavender.withValues(alpha: 0.0),
                 ],
               ),
             ),
           ),
         ),
-        child!,
+        child,
       ],
     );
   }

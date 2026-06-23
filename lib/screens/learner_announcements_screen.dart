@@ -125,7 +125,7 @@ class LearnerAnnouncementsScreen extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       itemCount: samples.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final a = samples[index];
         return _buildAnnouncementCard(
@@ -143,16 +143,19 @@ class LearnerAnnouncementsScreen extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       itemCount: docs.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final data = docs[index].data() as Map<String, dynamic>;
         final createdAt = (data['createdAt'] as Timestamp?)?.toDate() ??
             DateTime.now();
-        final iconCode = data['iconCode'] as int? ??
-            Icons.notifications_active_outlined.codePoint;
+
+        final iconData = data['iconCode'] != null
+            ? IconData(data['iconCode'] as int, fontFamily: 'MaterialIcons')
+            : Icons.notifications_active_outlined;
+
         return _buildAnnouncementCard(
-          icon: IconData(iconCode, fontFamily: 'MaterialIcons'),
-          iconColor: Color(data['iconColor'] as int? ?? kTeal.value),
+          icon: iconData,
+          iconColor: Color(data['iconColor'] as int? ?? kTeal.toARGB32()),
           title: data['title'] as String? ?? 'Announcement',
           body: data['body'] as String? ?? '',
           time: createdAt,
@@ -184,7 +187,7 @@ class LearnerAnnouncementsScreen extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.15),
+              color: iconColor.withAlpha(30),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: iconColor, size: 20),
@@ -198,27 +201,32 @@ class LearnerAnnouncementsScreen extends StatelessWidget {
                   title,
                   style: const TextStyle(
                     fontSize: 14,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w600,
                     color: kFg,
-                    height: 1.2,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   body,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     color: kMutedFg,
-                    height: 1.4,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  timeAgo,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: kMutedFg,
-                    fontStyle: FontStyle.italic,
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: Text(
+                    timeAgo,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: kMutedFg,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
@@ -230,15 +238,17 @@ class LearnerAnnouncementsScreen extends StatelessWidget {
   }
 
   String _formatTimeAgo(DateTime time) {
-    final diff = DateTime.now().difference(time);
-    if (diff.inMinutes < 60) {
-      return '${diff.inMinutes} min ago';
-    } else if (diff.inHours < 24) {
-      return '${diff.inHours} hours ago';
-    } else if (diff.inDays < 7) {
-      return '${diff.inDays} day${diff.inDays > 1 ? 's' : ''} ago';
+    final now = DateTime.now();
+    final difference = now.difference(time);
+
+    if (difference.inDays > 0) {
+      return DateFormat.MMMd().format(time);
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
     } else {
-      return DateFormat('MMM d, yyyy').format(time);
+      return 'Just now';
     }
   }
 }

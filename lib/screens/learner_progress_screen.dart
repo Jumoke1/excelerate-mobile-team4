@@ -2,8 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../widgets/learner_bottom_nav.dart';
+import '../models/roadmap_model.dart';
+import '../services/roadmap_service.dart';
+import '../../widgets/learner_bottom_nav.dart';
 import 'learner_home_screen.dart';
+
+
 
 const kPrimary = Color(0xFFE0194A);
 const kPurple = Color(0xFF9B59B6);
@@ -33,9 +37,6 @@ class _LearnerProgressScreenState extends State<LearnerProgressScreen> {
     _userId = FirebaseAuth.instance.currentUser?.uid;
   }
 
-  DocumentReference? get _userRef => _userId != null
-      ? FirebaseFirestore.instance.collection('users').doc(_userId)
-      : null;
   DocumentReference? get _profileRef => _userId != null
       ? FirebaseFirestore.instance.collection('learnerProfiles').doc(_userId)
       : null;
@@ -146,43 +147,89 @@ class _LearnerProgressScreenState extends State<LearnerProgressScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          _buildJourneyStep(
-            icon: Icons.person_add_rounded,
-            color: kSuccess,
-            title: 'Account Created',
-            subtitle: 'You joined Excelerate',
-            isCompleted: true,
-            isFirst: true,
-          ),
-          _buildJourneyStep(
-            icon: Icons.quiz_rounded,
-            color: kSuccess,
-            title: 'Onboarding Quiz Completed',
-            subtitle: 'Personalized your experience',
-            isCompleted: true,
-          ),
-          _buildJourneyStep(
-            icon: Icons.rocket_launch_rounded,
-            color: kPrimary,
-            title: 'First Program Enrolled',
-            subtitle: 'Digital Marketing Fundamentals',
-            isCompleted: true,
-          ),
-          _buildJourneyStep(
-            icon: Icons.school_rounded,
-            color: kOrange,
-            title: 'Complete First Course',
-            subtitle: '67% complete - Keep going!',
-            isCompleted: false,
-            isCurrent: true,
-          ),
-          _buildJourneyStep(
-            icon: Icons.workspace_premium_rounded,
-            color: kMutedFg,
-            title: 'Earn Your First Certificate',
-            subtitle: 'Unlock your achievement',
-            isCompleted: false,
-            isLast: true,
+          FutureBuilder<RoadmapModel?>(
+            future: _userId == null ? Future.value(null) : RoadmapService().getRoadmap(_userId!),
+
+
+
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (!snapshot.hasData || snapshot.data == null) {
+                return const Center(child: Text('No roadmap found.'));
+              }
+
+final roadmap = snapshot.data!;
+              // NOTE: RoadmapModel currently doesn't expose Firestore document id.
+              // We assume document id equals roadmap.userId for now; update if your backend uses a different key.
+              final roadmapId = roadmap.userId;
+
+              return Column(
+                children: roadmap.steps.asMap().entries.map((entry) {
+                  int idx = entry.key;
+                  var step = entry.value;
+
+                  return _buildJourneyStep(
+                    icon: _getIconForMilestone(step['type']),
+                    color: _getColorForMilestone(step['status']),
+                    title: step['title'],
+                    subtitle: step['description'],
+                    isCompleted: step['status'] == 'completed',
+                    isCurrent: step['status'] == 'in_progress',
+                    isFirst: idx == 0,
+                    isLast: idx == roadmap.steps.length - 1,
+                    onTap: () async {
+                      // Mark tapped step as completed and update progress.
+                      try {
+                        final roadmapRef = FirebaseFirestore.instance
+                            .collection('roadmaps')
+                            .doc(roadmap.userId);
+
+                        final updatedSteps = List<Map<String, dynamic>>.from(
+                            roadmap.steps);
+                        final currentStep = Map<String, dynamic>.from(
+                            updatedSteps[idx] as Map<String, dynamic>);
+
+                        currentStep['status'] = 'completed';
+                        updatedSteps[idx] = currentStep;
+
+                        final completedSteps = updatedSteps
+                            .where((s) => (s['status'] ?? '') == 'completed')
+                            .length;
+                        final progressPercent = updatedSteps.isEmpty
+                            ? 0.0
+                            : (completedSteps / updatedSteps.length) * 100.0;
+
+                        await roadmapRef.update({
+                          'steps': updatedSteps,
+                          'completedSteps': completedSteps,
+                          'progressPercent': progressPercent,
+                          'status': completedSteps == updatedSteps.length
+                              ? 'completed'
+                              : 'in_progress',
+                        });
+
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Step completed!'),
+                          ),
+                        );
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to complete step: $e'),
+                          ),
+                        );
+                      }
+                    },
+
+                  );
+                }).toList(),
+              );
+            },
           ),
         ],
       ),
@@ -198,87 +245,88 @@ class _LearnerProgressScreenState extends State<LearnerProgressScreen> {
     bool isCurrent = false,
     bool isFirst = false,
     bool isLast = false,
+    required VoidCallback onTap,
   }) {
     return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Timeline indicator
-          Column(
-            children: [
-              // Top line
-              if (!isFirst)
-                Container(
-                  width: 2,
-                  height: 12,
-                  color: isCompleted ? kSuccess : kMuted,
-                ),
-              // Circle
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: isCompleted ? color : (isCurrent ? color : kMuted),
-                  shape: BoxShape.circle,
-                  border: isCurrent
-                      ? Border.all(color: color, width: 3)
-                      : null,
-                  boxShadow: isCurrent
-                      ? [
-                    BoxShadow(
-                      color: color.withOpacity(0.3),
-                      blurRadius: 8,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                      : null,
-                ),
-                child: Icon(
-                  isCompleted ? Icons.check_rounded : icon,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-              // Bottom line
-              if (!isLast)
-                Expanded(
-                  child: Container(
+      child: InkWell(
+        onTap: isCompleted ? null : onTap,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Column(
+              children: [
+                if (!isFirst)
+                  Container(
                     width: 2,
+                    height: 12,
                     color: isCompleted ? kSuccess : kMuted,
                   ),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: isCompleted ? color : (isCurrent ? color : kMuted),
+                    shape: BoxShape.circle,
+                    border: isCurrent
+                        ? Border.all(color: color, width: 3)
+                        : null,
+                    boxShadow: isCurrent
+                        ? [
+                            BoxShadow(
+                              color: color.withAlpha(80),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Icon(
+                    isCompleted ? Icons.check_rounded : icon,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
-            ],
-          ),
-          const SizedBox(width: 14),
-          // Content
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: isCompleted || isCurrent ? kFg : kMutedFg,
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      color: isCompleted ? kSuccess : kMuted,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isCurrent ? kPrimary : kMutedFg,
-                      fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
+              ],
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: isCompleted || isCurrent ? kFg : kMutedFg,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isCurrent ? kPrimary : kMutedFg,
+                        fontWeight: isCurrent
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -317,7 +365,7 @@ class _LearnerProgressScreenState extends State<LearnerProgressScreen> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withAlpha(30),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color, size: 18),
@@ -420,7 +468,7 @@ class _LearnerProgressScreenState extends State<LearnerProgressScreen> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: kPurple.withOpacity(0.15),
+                      color: kPurple.withAlpha(30),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(
@@ -488,7 +536,7 @@ class _LearnerProgressScreenState extends State<LearnerProgressScreen> {
           width: 28,
           height: 28,
           decoration: BoxDecoration(
-            color: kPurple.withOpacity(0.1),
+            color: kPurple.withAlpha(25),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Icon(icon, color: kPurple, size: 14),
@@ -514,9 +562,9 @@ class _LearnerProgressScreenState extends State<LearnerProgressScreen> {
                 children: answers.map((a) => Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: kPrimary.withOpacity(0.1),
+                    color: kPrimary.withAlpha(25),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: kPrimary.withOpacity(0.3)),
+                    border: Border.all(color: kPrimary.withAlpha(70)),
                   ),
                   child: Text(
                     a,
@@ -591,67 +639,96 @@ class _LearnerProgressScreenState extends State<LearnerProgressScreen> {
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: kPrimary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  color: kPrimary.withAlpha(30),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text(
-                  '3/5',
+                  '3 / 5',
                   style: TextStyle(
+                    color: kPrimary,
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
-                    color: kPrimary,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Row(
-            children: achievements.map((a) => Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 3),
-                child: _buildAchievementBadge(a),
-              ),
-            )).toList(),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: achievements.map((a) {
+              final unlocked = a['unlocked'] as bool;
+              return Column(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: unlocked ? kPrimary.withAlpha(30) : kBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: unlocked ? kPrimary.withAlpha(80) : kBorder,
+                      ),
+                    ),
+                    child: Icon(
+                      a['icon'] as IconData,
+                      color: unlocked ? kPrimary : kMutedFg,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: 60,
+                    child: Text(
+                      a['label'] as String,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: unlocked ? kFg : kMutedFg,
+                        fontWeight: unlocked ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                      maxLines: 2,
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAchievementBadge(Map<String, dynamic> achievement) {
-    final unlocked = achievement['unlocked'] as bool;
-    return Column(
-      children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: unlocked ? kPrimary : kMuted,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            achievement['icon'] as IconData,
-            color: unlocked ? Colors.white : kMutedFg,
-            size: 22,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          achievement['label'] as String,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 8,
-            fontWeight: FontWeight.w700,
-            color: unlocked ? kFg : kMutedFg,
-            letterSpacing: 0.3,
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
-    );
+  IconData _getIconForMilestone(String type) {
+    switch (type) {
+      case 'onboarding':
+        return Icons.flag_rounded;
+      case 'course':
+        return Icons.school_rounded;
+      case 'project':
+        return Icons.code_rounded;
+      case 'assessment':
+        return Icons.quiz_rounded;
+      case 'certificate':
+        return Icons.workspace_premium_rounded;
+      default:
+        return Icons.circle_outlined;
+    }
+  }
+
+  Color _getColorForMilestone(String status) {
+    switch (status) {
+      case 'completed':
+        return kSuccess;
+      case 'in_progress':
+        return kPrimary;
+      case 'locked':
+        return kMuted;
+      default:
+        return kMuted;
+    }
   }
 }

@@ -329,7 +329,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 height: 48,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _getRoleColor(role).withOpacity(0.15),
+                  color: _getRoleColor(role).withValues(alpha: 0.15),
                   border: Border.all(color: _getRoleColor(role), width: 1.5),
                 ),
                 child: Center(
@@ -421,9 +421,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         text,
@@ -520,7 +520,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  value: selectedRole,
+                  initialValue: selectedRole,
                   decoration: const InputDecoration(
                     labelText: 'Role',
                     border: OutlineInputBorder(),
@@ -567,8 +567,17 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     required String password,
     required String role,
   }) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      _showSnackBar('Please fill all required fields', isError: true);
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: const Text('Please fill all required fields'),
+          backgroundColor: kAdminDanger,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
       return;
     }
 
@@ -590,27 +599,40 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         'onboardingCompleted': false,
       });
 
-      _showSnackBar('✅ User created successfully');
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: const Text('✅ User created successfully'),
+          backgroundColor: kAdminSuccess,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
     } on FirebaseAuthException catch (e) {
       String msg = 'Failed to create user';
-      if (e.code == 'email-already-in-use') msg = 'Email already exists';
-      else if (e.code == 'weak-password') {
+      if (e.code == 'email-already-in-use') {
+        msg = 'Email already exists';
+      } else if (e.code == 'weak-password') {
         msg = 'Password too weak (min 6 chars)';
       }
-      _showSnackBar(msg, isError: true);
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: kAdminDanger,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
     } catch (e) {
-      _showSnackBar('Error: $e', isError: true);
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: kAdminDanger,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 
-  void _showSnackBar(String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: isError ? kAdminDanger : kAdminSuccess,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
+
 }

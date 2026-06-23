@@ -518,7 +518,7 @@ class _OnboardingQuizScreenState extends State<OnboardingQuizScreen> {
             child: ListView.separated(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
               itemCount: _currentQuestion.options.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final option = _currentQuestion.options[index];
                 return _QuizOptionCard(
@@ -537,7 +537,7 @@ class _OnboardingQuizScreenState extends State<OnboardingQuizScreen> {
               color: kCardBg,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -2),
                 ),
@@ -667,14 +667,14 @@ class _QuizOptionCard extends StatelessWidget {
             boxShadow: isSelected
                 ? [
               BoxShadow(
-                color: kPrimary.withOpacity(0.15),
+                color: kPrimary.withValues(alpha: 0.15),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
             ]
                 : [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),

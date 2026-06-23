@@ -1,10 +1,9 @@
-// lib/screens/admin/admin_programs_screen.dart
+// lib/screens/admin/admin_announcements_screen.dart
 import 'package:flutter/material.dart';
-import '../../widgets/admin_bottom_nav.dart';
-import 'admin_home_screen.dart';
+import '../../../widgets/admin_bottom_nav.dart';
 
-class AdminProgramsScreen extends StatelessWidget {
-  const AdminProgramsScreen({super.key});
+class AdminAnnouncementsScreen extends StatelessWidget {
+  const AdminAnnouncementsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -14,19 +13,14 @@ class AdminProgramsScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
-        title: const Text('Programs',
+        title: const Text('Announcements',
             style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w900,
                 color: Colors.black)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const AdminHomeScreen()),
-            );
-          },
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: Center(
@@ -36,18 +30,18 @@ class AdminProgramsScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E40AF).withOpacity(0.1),
+                color: const Color(0xFF059669).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.menu_book_rounded,
+                Icons.campaign_rounded,
                 size: 64,
-                color: Color(0xFF1E40AF),
+                color: Color(0xFF059669),
               ),
             ),
             const SizedBox(height: 20),
             const Text(
-              'Programs Management',
+              'Announcements',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w900,
@@ -66,7 +60,7 @@ class AdminProgramsScreen extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: const AdminBottomNav(
-        currentDestination: AdminNavDestination.programs,
+        currentDestination: AdminNavDestination.dashboard,
       ),
     );
   }

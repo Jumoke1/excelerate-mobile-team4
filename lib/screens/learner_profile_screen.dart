@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:confetti/confetti.dart';
-import '../widgets/learner_bottom_nav.dart';
+import '../../widgets/learner_bottom_nav.dart';
 import 'splash_screen.dart';  // ✅ Import the splash screen
 
 const kPrimary = Color(0xFFE0194A);
@@ -106,27 +106,11 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   String? _userId;
   bool _isEditMode = false;
-  int _totalShares = 0;
 
   @override
   void initState() {
     super.initState();
     _userId = FirebaseAuth.instance.currentUser?.uid;
-    _loadShareCount();
-  }
-
-  Future<void> _loadShareCount() async {
-    if (_userId == null) return;
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('progressShares')
-          .where('userId', isEqualTo: _userId)
-          .count()
-          .get();
-      if (mounted) {
-        setState(() => _totalShares = snapshot.count ?? 0);
-      }
-    } catch (_) {}
   }
 
   DocumentReference? get _userRef => _userId != null
@@ -136,147 +120,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ? FirebaseFirestore.instance.collection('achievements').doc(_userId)
       : null;
 
-  // ============================================================
-  //  BADGE UNLOCK LOGIC
-  // ============================================================
-  Future<bool> _unlockBadge(String badgeId) async {
-    if (_userId == null) return false;
-
-    final def = _BadgeDef.all.firstWhere(
-          (b) => b.id == badgeId,
-      orElse: () => const _BadgeDef(
-        id: '',
-        name: '',
-        description: '',
-        icon: Icons.error,
-        color: Colors.grey,
-        criteria: '',
-      ),
-    );
-    if (def.id.isEmpty) return false;
-
-    try {
-      final achievementsRef = FirebaseFirestore.instance
-          .collection('achievements')
-          .doc(_userId);
-      final doc = await achievementsRef.get();
-
-      if (doc.exists) {
-        final badges = doc.data()?['badges'];
-        if (badges is List) {
-          final alreadyUnlocked =
-          badges.any((b) => b is Map && b['badgeId'] == badgeId);
-          if (alreadyUnlocked) return false;
-        }
-      }
-
-      await achievementsRef.set({
-        'badges': FieldValue.arrayUnion([
-          {
-            'badgeId': badgeId,
-            'name': def.name,
-            'description': def.description,
-            'unlockedAt': DateTime.now().toIso8601String(),
-          }
-        ]),
-      }, SetOptions(merge: true));
-
-      return true;
-    } catch (e) {
-      debugPrint('Badge unlock error: $e');
-      return false;
-    }
-  }
-
-  // ============================================================
-  //  CHECK AND UNLOCK BADGES (with celebration!)
-  // ============================================================
-  Future<List<String>> _checkAndUnlockBadges({
-    required int totalXP,
-    required int level,
-  }) async {
-    final List<String> newlyUnlocked = [];
-
-    if (totalXP >= 50) {
-      if (await _unlockBadge('quick_starter')) {
-        newlyUnlocked.add('quick_starter');
-      }
-    }
-
-    if (totalXP >= 250) {
-      if (await _unlockBadge('strategic_mind')) {
-        newlyUnlocked.add('strategic_mind');
-      }
-    }
-
-    if (_totalShares >= 3) {
-      if (await _unlockBadge('collaborator')) {
-        newlyUnlocked.add('collaborator');
-      }
-    }
-
-    if (totalXP >= 500) {
-      if (await _unlockBadge('course_completion')) {
-        newlyUnlocked.add('course_completion');
-      }
-    }
-
-    if (level >= 5) {
-      if (await _unlockBadge('master_pathfinder')) {
-        newlyUnlocked.add('master_pathfinder');
-      }
-    }
-
-    if (newlyUnlocked.isNotEmpty && mounted) {
-      for (int i = 0; i < newlyUnlocked.length; i++) {
-        if (i > 0) {
-          await Future.delayed(const Duration(milliseconds: 3500));
-        }
-        if (!mounted) break;
-
-        final def = _BadgeDef.all.firstWhere(
-              (b) => b.id == newlyUnlocked[i],
-        );
-        await _showBadgeCelebration(
-          badgeName: def.name,
-          description: def.description,
-          icon: def.icon,
-          color: def.color,
-        );
-      }
-    }
-
-    return newlyUnlocked;
-  }
-
-  // ============================================================
-  //  BADGE CELEBRATION OVERLAY
-  // ============================================================
-  Future<void> _showBadgeCelebration({
-    required String badgeName,
-    required String description,
-    required IconData icon,
-    required Color color,
-  }) async {
-    await showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Badge Celebration',
-      barrierColor: Colors.transparent,
-      transitionDuration: const Duration(milliseconds: 300),
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return _BadgeCelebrationOverlay(
-          badgeName: badgeName,
-          description: description,
-          icon: icon,
-          color: color,
-        );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(opacity: animation, child: child);
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -360,7 +203,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
-                color: kPrimary.withOpacity(0.3),
+                color: kPrimary.withValues(alpha: 0.3),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -393,7 +236,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: kAuthAccentDark.withOpacity(0.08),
+                  color: kAuthAccentDark.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
@@ -448,7 +291,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             border: Border.all(color: kBorder),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -485,7 +328,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             border: Border.all(color: Colors.white, width: 4),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: Colors.black.withValues(alpha: 0.1),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
@@ -613,9 +456,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -680,7 +523,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           decoration: BoxDecoration(
             color: kCardBg,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: kPurple.withOpacity(0.3), width: 1.5),
+            border: Border.all(color: kPurple.withValues(alpha: 0.3), width: 1.5),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -877,7 +720,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: kPrimary.withOpacity(0.1),
+                        color: kPrimary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
@@ -947,10 +790,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: unlocked ? kCardBg : kMuted.withOpacity(0.3),
+            color: unlocked ? kCardBg : kMuted.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: unlocked ? color.withOpacity(0.3) : kMuted,
+              color: unlocked ? color.withValues(alpha: 0.3) : kMuted,
               width: 1,
             ),
           ),
@@ -961,7 +804,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: unlocked ? color.withOpacity(0.15) : kMuted,
+                  color: unlocked ? color.withValues(alpha: 0.15) : kMuted,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon,
@@ -1157,7 +1000,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     decoration: BoxDecoration(
       color: kCardBg,
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: kPrimary.withOpacity(0.3)),
+      border: Border.all(color: kPrimary.withValues(alpha: 0.3)),
     ),
     child: Row(children: [
       const Icon(Icons.error_outline, color: kPrimary),
@@ -1326,6 +1169,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ✅ CHANGED: Delete Account - goes to SplashScreen
   Future<void> _showDeleteAccountDialog() async {
+    final navigator = Navigator.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -1368,25 +1214,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         await user.delete();
 
-        if (mounted) {
-          // ✅ Navigate to SplashScreen (not the loading circle)
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => const SplashScreen()),
-                (route) => false,
-          );
-          _showSnackbar('Account deleted');
-        }
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: const Text('Account deleted'),
+            backgroundColor: kSuccess,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        navigator.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const SplashScreen()),
+              (route) => false,
+        );
       } on FirebaseAuthException catch (e) {
-        if (e.code == 'requires-recent-login') {
-          _showSnackbar(
-              'Please logout and login again before deleting account',
-              isError: true);
-        } else {
-          _showSnackbar('Error: ${e.message}', isError: true);
-        }
+        final msg = e.code == 'requires-recent-login'
+            ? 'Please logout and login again before deleting account'
+            : 'Error: ${e.message}';
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: kPrimary,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
       } catch (e) {
-        _showSnackbar('Error: $e', isError: true);
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: kPrimary,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
       }
     }
   }
@@ -1418,7 +1278,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   SwitchListTile(
                     title: const Text('Deadline Reminders'),
                     value: prefs['deadlineReminders'] ?? true,
-                    activeColor: kPrimary,
+                    activeThumbColor: kPrimary,
                     contentPadding: EdgeInsets.zero,
                     onChanged: (v) =>
                         setState(() => prefs['deadlineReminders'] = v),
@@ -1426,7 +1286,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   SwitchListTile(
                     title: const Text('Session Alerts'),
                     value: prefs['sessionAlerts'] ?? true,
-                    activeColor: kPrimary,
+                    activeThumbColor: kPrimary,
                     contentPadding: EdgeInsets.zero,
                     onChanged: (v) =>
                         setState(() => prefs['sessionAlerts'] = v),
@@ -1434,7 +1294,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   SwitchListTile(
                     title: const Text('Progress Updates'),
                     value: prefs['progressUpdates'] ?? true,
-                    activeColor: kPrimary,
+                    activeThumbColor: kPrimary,
                     contentPadding: EdgeInsets.zero,
                     onChanged: (v) =>
                         setState(() => prefs['progressUpdates'] = v),
@@ -1478,7 +1338,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: unlocked ? color.withOpacity(0.15) : kMuted,
+              color: unlocked ? color.withValues(alpha: 0.15) : kMuted,
               shape: BoxShape.circle,
               border: unlocked
                   ? Border.all(color: color, width: 2)
@@ -1503,7 +1363,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.symmetric(
                   horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: kSuccess.withOpacity(0.1),
+                color: kSuccess.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Row(
@@ -1602,6 +1462,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ✅ CHANGED: Logout - goes to SplashScreen (not loading circle)
   Future<void> _handleLogout() async {
+    final navigator = Navigator.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -1626,16 +1489,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await _userRef!.update(
             {'lastActiveAt': FieldValue.serverTimestamp()});
         await FirebaseAuth.instance.signOut();
-        if (mounted) {
-          // ✅ Navigate to SplashScreen (not the loading circle)
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => const SplashScreen()),
-                (route) => false,
-          );
-        }
+        navigator.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const SplashScreen()),
+              (route) => false,
+        );
       } catch (e) {
-        if (mounted) _showSnackbar('Logout failed: $e', isError: true);
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Logout failed: $e'),
+            backgroundColor: kPrimary,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
       }
     }
   }
@@ -1709,7 +1575,7 @@ class _BadgeCelebrationOverlayState extends State<_BadgeCelebrationOverlay>
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.black.withOpacity(0.85),
+      color: Colors.black.withValues(alpha: 0.85),
       child: Stack(
         children: [
           Align(
@@ -1789,13 +1655,13 @@ class _BadgeCelebrationOverlayState extends State<_BadgeCelebrationOverlay>
                         gradient: LinearGradient(
                           colors: [
                             widget.color,
-                            widget.color.withOpacity(0.7),
+                            widget.color.withValues(alpha: 0.7),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(30),
                         boxShadow: [
                           BoxShadow(
-                            color: widget.color.withOpacity(0.5),
+                            color: widget.color.withValues(alpha: 0.5),
                             blurRadius: 20,
                             spreadRadius: 2,
                           ),
@@ -1844,7 +1710,7 @@ class _BadgeCelebrationOverlayState extends State<_BadgeCelebrationOverlay>
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: widget.color.withOpacity(0.4),
+                                  color: widget.color.withValues(alpha: 0.4),
                                   width: 2,
                                 ),
                               ),
@@ -1862,13 +1728,13 @@ class _BadgeCelebrationOverlayState extends State<_BadgeCelebrationOverlay>
                               shape: BoxShape.circle,
                               gradient: RadialGradient(
                                 colors: [
-                                  widget.color.withOpacity(0.9),
-                                  widget.color.withOpacity(0.5),
+                                  widget.color.withValues(alpha: 0.9),
+                                  widget.color.withValues(alpha: 0.5),
                                 ],
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: widget.color.withOpacity(0.6),
+                                  color: widget.color.withValues(alpha: 0.6),
                                   blurRadius: 30,
                                   spreadRadius: 5,
                                 ),
@@ -1900,7 +1766,7 @@ class _BadgeCelebrationOverlayState extends State<_BadgeCelebrationOverlay>
                                             colors: [
                                               Colors.transparent,
                                               Colors.white
-                                                  .withOpacity(0.4),
+                                                  .withValues(alpha: 0.4),
                                               Colors.transparent,
                                             ],
                                             stops: const [0.0, 0.5, 1.0],
@@ -1955,7 +1821,7 @@ class _BadgeCelebrationOverlayState extends State<_BadgeCelebrationOverlay>
                         widget.description,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
+                          color: Colors.white.withValues(alpha: 0.85),
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
                           height: 1.5,
@@ -1983,7 +1849,7 @@ class _BadgeCelebrationOverlayState extends State<_BadgeCelebrationOverlay>
                             borderRadius: BorderRadius.circular(30),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.white.withOpacity(0.3),
+                                color: Colors.white.withValues(alpha: 0.3),
                                 blurRadius: 12,
                                 spreadRadius: 1,
                               ),
@@ -2062,7 +1928,7 @@ class _PulsingGlowRingState extends State<_PulsingGlowRing>
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: widget.color.withOpacity(1 - _ctrl.value),
+              color: widget.color.withValues(alpha: 1 - _ctrl.value),
               width: 3,
             ),
           ),
@@ -2082,7 +1948,7 @@ class _DashedCirclePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color.withOpacity(0.6)
+      ..color = color.withValues(alpha: 0.6)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 

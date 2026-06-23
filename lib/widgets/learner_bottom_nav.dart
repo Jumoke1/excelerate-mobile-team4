@@ -1,34 +1,31 @@
-// lib/widgets/admin_bottom_nav.dart
+// lib/widgets/learner_bottom_nav.dart
 import 'package:flutter/material.dart';
 
-// ✅ Admin Screens - matching your file names exactly
-import '../screens/admin_home_screen.dart';
-import '../screens/admin_users_screen.dart';
-import '../screens/admin_programs_screen.dart';
-import '../screens/admin_announcements_screen.dart';
-import '../screens/admin_analytics_screen.dart';
-import '../screens/admin_profile_screen.dart';
+// Screens that bottom nav can route to
+import '../../screens/learner_home_screen.dart';
+import '../../screens/learner_explore_screen.dart';
+import '../../screens/learner_learning_screen.dart';
+import '../../screens/learner_progress_screen.dart';
+import '../../screens/learner_profile_screen.dart';
 
-// Color constants (matching learner style)
+// Color constants
 const kPrimary = Color(0xFFE0194A);
-const kPurple = Color(0xFF9B59B6);
 const kMutedFg = Color(0xFF949494);
-const kAuthAccentDark = Color(0xFFE53935);
 
 /// Enum for the 5 bottom nav destinations
-enum AdminNavDestination {
-  dashboard,
-  users,
-  programs,
-  analytics,
+enum HomeNavDestination {
+  home,
+  explore,
+  learning,
+  progress,
   profile,
 }
 
-class AdminBottomNav extends StatelessWidget {
-  final AdminNavDestination currentDestination;
+class BottomNav extends StatelessWidget {
+  final HomeNavDestination currentDestination;
   final bool useReplacement;
 
-  const AdminBottomNav({
+  const BottomNav({
     super.key,
     required this.currentDestination,
     this.useReplacement = true,
@@ -36,15 +33,15 @@ class AdminBottomNav extends StatelessWidget {
 
   int get _currentIndex {
     switch (currentDestination) {
-      case AdminNavDestination.dashboard:
+      case HomeNavDestination.home:
         return 0;
-      case AdminNavDestination.users:
+      case HomeNavDestination.explore:
         return 1;
-      case AdminNavDestination.programs:
+      case HomeNavDestination.learning:
         return 2;
-      case AdminNavDestination.analytics:
+      case HomeNavDestination.progress:
         return 3;
-      case AdminNavDestination.profile:
+      case HomeNavDestination.profile:
         return 4;
     }
   }
@@ -56,7 +53,7 @@ class AdminBottomNav extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha(12),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -71,38 +68,38 @@ class AdminBottomNav extends StatelessWidget {
             children: [
               _buildNavItem(
                 context: context,
-                icon: Icons.dashboard_rounded,
+                icon: Icons.home_rounded,
                 label: 'Home',
                 index: 0,
-                destination: AdminNavDestination.dashboard,
+                destination: HomeNavDestination.home,
               ),
               _buildNavItem(
                 context: context,
-                icon: Icons.people_alt_rounded,
-                label: 'Users',
+                icon: Icons.explore_outlined,
+                label: 'Explore',
                 index: 1,
-                destination: AdminNavDestination.users,
+                destination: HomeNavDestination.explore,
               ),
               _buildNavItem(
                 context: context,
-                icon: Icons.menu_book_rounded,
-                label: 'Programs',
+                icon: Icons.school_outlined,
+                label: 'Learning',
                 index: 2,
-                destination: AdminNavDestination.programs,
+                destination: HomeNavDestination.learning,
               ),
               _buildNavItem(
                 context: context,
-                icon: Icons.analytics_rounded,
-                label: 'Analytics',
+                icon: Icons.trending_up_outlined,
+                label: 'Progress',
                 index: 3,
-                destination: AdminNavDestination.analytics,
+                destination: HomeNavDestination.progress,
               ),
               _buildNavItem(
                 context: context,
-                icon: Icons.person_rounded,
+                icon: Icons.person_outline,
                 label: 'Profile',
                 index: 4,
-                destination: AdminNavDestination.profile,
+                destination: HomeNavDestination.profile,
               ),
             ],
           ),
@@ -116,7 +113,7 @@ class AdminBottomNav extends StatelessWidget {
     required IconData icon,
     required String label,
     required int index,
-    required AdminNavDestination destination,
+    required HomeNavDestination destination,
   }) {
     final isActive = _currentIndex == index;
 
@@ -144,29 +141,27 @@ class AdminBottomNav extends StatelessWidget {
     );
   }
 
-  void _handleTap(BuildContext context, AdminNavDestination destination) {
+  void _handleTap(BuildContext context, HomeNavDestination destination) {
     if (destination == currentDestination) return;
 
     Widget? nextScreen;
     switch (destination) {
-      case AdminNavDestination.dashboard:
-        nextScreen = const AdminHomeScreen();  // ✅ Changed from AdminDashboardScreen
+      case HomeNavDestination.home:
+        nextScreen = const LearnerHomeScreen();
         break;
-      case AdminNavDestination.users:
-        nextScreen = const AdminUsersScreen();
+      case HomeNavDestination.explore:
+        nextScreen = const LearnerExploreScreen();
         break;
-      case AdminNavDestination.programs:
-        nextScreen = const AdminProgramsScreen();
+      case HomeNavDestination.learning:
+        nextScreen = const LearnerLearningScreen();
         break;
-      case AdminNavDestination.analytics:
-        nextScreen = const AdminAnalyticsScreen();
+      case HomeNavDestination.progress:
+        nextScreen = const LearnerProgressScreen();
         break;
-      case AdminNavDestination.profile:
-        nextScreen = const AdminProfileScreen();
+      case HomeNavDestination.profile:
+        nextScreen = const ProfileScreen();
         break;
     }
-
-    if (nextScreen == null) return;
 
     if (useReplacement) {
       Navigator.pushReplacement(

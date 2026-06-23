@@ -1,9 +1,10 @@
-// lib/screens/admin/admin_announcements_screen.dart
+// lib/screens/admin/admin_analytics_screen.dart
 import 'package:flutter/material.dart';
 import '../../widgets/admin_bottom_nav.dart';
+import 'admin_home_screen.dart';
 
-class AdminAnnouncementsScreen extends StatelessWidget {
-  const AdminAnnouncementsScreen({super.key});
+class AdminAnalyticsScreen extends StatelessWidget {
+  const AdminAnalyticsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -13,14 +14,19 @@ class AdminAnnouncementsScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
-        title: const Text('Announcements',
+        title: const Text('Analytics',
             style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w900,
                 color: Colors.black)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const AdminHomeScreen()),
+            );
+          },
         ),
       ),
       body: Center(
@@ -30,18 +36,18 @@ class AdminAnnouncementsScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color(0xFF059669).withOpacity(0.1),
+                color: const Color(0xFF0EA5E9).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.campaign_rounded,
+                Icons.analytics_rounded,
                 size: 64,
-                color: Color(0xFF059669),
+                color: Color(0xFF0EA5E9),
               ),
             ),
             const SizedBox(height: 20),
             const Text(
-              'Announcements',
+              'Analytics Dashboard',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w900,
@@ -60,7 +66,7 @@ class AdminAnnouncementsScreen extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: const AdminBottomNav(
-        currentDestination: AdminNavDestination.dashboard,
+        currentDestination: AdminNavDestination.analytics,
       ),
     );
   }

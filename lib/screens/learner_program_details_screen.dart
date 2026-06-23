@@ -1,8 +1,16 @@
-// lib/screens/learner_program_details_screen.dart
+import '../models/programme_model.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../services/enrolment_service.dart';
+import '../models/enrolment_model.dart';
+
+// NOTE: enrolledAt expects a Timestamp in EnrolmentModel
+
+
 // Color constants (matches home + profile screens)
+
 const kPrimary = Color(0xFFE0194A);
 const kPurple = Color(0xFF9B59B6);
 const kBg = Color(0xFFF7F7F7);
@@ -14,7 +22,7 @@ const kTeal = Color(0xFF0891B2);
 const kOrange = Color(0xFFEA580C);
 
 class LearnerProgramDetailsScreen extends StatefulWidget {
-  final Map<String, dynamic> program;
+  final ProgrammeModel program;
 
   const LearnerProgramDetailsScreen({super.key, required this.program});
 
@@ -33,22 +41,6 @@ class _LearnerProgramDetailsScreenState
   void initState() {
     super.initState();
     _userId = FirebaseAuth.instance.currentUser?.uid;
-    _checkEnrollmentStatus();
-  }
-
-  Future<void> _checkEnrollmentStatus() async {
-    if (_userId == null) return;
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(_userId)
-          .collection('enrolledPrograms')
-          .doc(widget.program['id'])
-          .get();
-      if (mounted) {
-        setState(() => _isEnrolled = doc.exists);
-      }
-    } catch (_) {}
   }
 
   Future<void> _enrollInProgram() async {
@@ -56,28 +48,27 @@ class _LearnerProgramDetailsScreenState
 
     setState(() => _isEnrolling = true);
     try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(_userId)
-          .collection('enrolledPrograms')
-          .doc(widget.program['id'])
-          .set({
-        'programId': widget.program['id'],
-        'title': widget.program['title'],
-        'enrolledAt': FieldValue.serverTimestamp(),
-        'progress': widget.program['progress'] ?? 0.0,
-        'status': 'active',
-      });
+      // Also create global enrolment doc for roadmap generation
+      try {
+        final enrolmentService = EnrolmentService();
+        await enrolmentService.createEnrolment(
+          EnrolmentModel(
+            userId: _userId!,
+            programmeId: widget.program.id.toString(),
+            roadmapId: null,
+            roadmapStepNumber: null,
+            status: 'active',
+            enrolledAt: Timestamp.now(),
 
-      // Also add to achievements
-      final achievementsRef = FirebaseFirestore.instance
-          .collection('achievements')
-          .doc(_userId);
-      await achievementsRef.set({
-        'activeProgrammes': FieldValue.arrayUnion([
-          {'programId': widget.program['id'], 'title': widget.program['title']}
-        ])
-      }, SetOptions(merge: true));
+
+            completedAt: null,
+            reflectionSubmitted: false,
+            feedbackSummary: null,
+          ),
+        );
+      } catch (_) {
+        // Keep backward compatibility even if global enrolment write fails.
+      }
 
       if (mounted) {
         setState(() => _isEnrolled = true);
@@ -89,7 +80,7 @@ class _LearnerProgramDetailsScreenState
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Enrolled in ${widget.program['title']}!',
+                    'Enrolled in ${widget.program.title}!',
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -121,22 +112,19 @@ class _LearnerProgramDetailsScreenState
   }
 
   IconData get _icon {
-    final code = widget.program['iconCode'] as int? ?? Icons.menu_book.codePoint;
-    return IconData(code, fontFamily: 'MaterialIcons');
+return IconData(widget.program.iconCode, fontFamily: 'MaterialIcons');
   }
 
   Color get _iconColor {
-    final value = widget.program['iconColor'] as int? ?? kTeal.value;
-    return Color(value);
+    return Color(widget.program.iconColor);
   }
 
-  double get _progress =>
-      (widget.program['progress'] as double?) ?? 0.0;
+  double get _progress => widget.program.progress;
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.program['title'] as String? ?? 'Program';
-    final modules = widget.program['modules'] as String? ?? '0 of 0 modules';
+    final title = widget.program.title;
+    final modules = '0 of 0 modules';
 
     return Scaffold(
       backgroundColor: kBg,
@@ -223,13 +211,13 @@ class _LearnerProgramDetailsScreenState
           end: Alignment.bottomRight,
           colors: [
             _iconColor,
-            _iconColor.withOpacity(0.7),
+            _iconColor.withValues(alpha: 0.7),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: _iconColor.withOpacity(0.3),
+            color: _iconColor.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 6),
           ),
@@ -241,7 +229,7 @@ class _LearnerProgramDetailsScreenState
             width: 70,
             height: 70,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(_icon, color: Colors.white, size: 36),
@@ -255,7 +243,7 @@ class _LearnerProgramDetailsScreenState
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.25),
+                    color: Colors.white.withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(
@@ -441,7 +429,7 @@ class _LearnerProgramDetailsScreenState
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: kPurple.withOpacity(0.15),
+              color: kPurple.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: const Center(
@@ -514,7 +502,7 @@ class _LearnerProgramDetailsScreenState
         onPressed: _isEnrolling || _isEnrolled ? null : _enrollInProgram,
         style: ElevatedButton.styleFrom(
           backgroundColor: kPrimary,
-          disabledBackgroundColor: kPrimary.withOpacity(0.4),
+          disabledBackgroundColor: kPrimary.withValues(alpha: 0.4),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

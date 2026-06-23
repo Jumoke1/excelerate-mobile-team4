@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "587046150218",
+    "project_id": "excelerate-pathfinder",
+    "storage_bucket": "excelerate-pathfinder.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:587046150218:android:0f0ebc616d532b46d4c6b3",
+        "android_client_info": {
+          "package_name": "com.example.excelerate_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCIeuVjt5G4FgFygYqH0_git8AO-Y2DNu0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

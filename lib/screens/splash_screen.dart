@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme_splash.dart';
+import '../../theme/app_theme_splash.dart';
 import 'admin_login_screen.dart';
 import 'learner_login_screen.dart';
+
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -104,8 +105,8 @@ class _SplashScreenState extends State<SplashScreen>
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const AdminLoginScreen(),
-        transitionsBuilder: (_, animation, __, child) =>
+        pageBuilder: (_, _, _) => const AdminLoginScreen(),
+        transitionsBuilder: (_, animation, _, child) =>
             FadeTransition(opacity: animation, child: child),
         transitionDuration: const Duration(milliseconds: 500),
       ),
@@ -116,8 +117,8 @@ class _SplashScreenState extends State<SplashScreen>
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const LoginScreen(),
-        transitionsBuilder: (_, animation, __, child) =>
+        pageBuilder: (_, _, _) => const LoginScreen(),
+        transitionsBuilder: (_, animation, _, child) =>
             FadeTransition(opacity: animation, child: child),
         transitionDuration: const Duration(milliseconds: 500),
       ),
@@ -150,7 +151,7 @@ class _SplashScreenState extends State<SplashScreen>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppColors.primary.withOpacity(0.15),
+                    AppColors.primary.withAlpha(38),
                     Colors.transparent,
                   ],
                 ),
@@ -167,7 +168,7 @@ class _SplashScreenState extends State<SplashScreen>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppColors.accent.withOpacity(0.12),
+                    AppColors.accent.withAlpha(30),
                     Colors.transparent,
                   ],
                 ),
@@ -183,7 +184,7 @@ class _SplashScreenState extends State<SplashScreen>
                 // Logo
                 AnimatedBuilder(
                   animation: _logoController,
-                  builder: (_, __) => Opacity(
+                  builder: (_, _) => Opacity(
                     opacity: _logoOpacity.value,
                     child: Transform.scale(
                       scale: _logoScale.value,
@@ -199,7 +200,7 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primary.withOpacity(0.4),
+                              color: AppColors.primary.withAlpha(102),
                               blurRadius: 30,
                               spreadRadius: 5,
                             ),
@@ -220,7 +221,7 @@ class _SplashScreenState extends State<SplashScreen>
                 // App name
                 AnimatedBuilder(
                   animation: _textController,
-                  builder: (_, __) => SlideTransition(
+                  builder: (_, _) => SlideTransition(
                     position: _textSlide,
                     child: Opacity(
                       opacity: _textOpacity.value,
@@ -259,10 +260,10 @@ class _SplashScreenState extends State<SplashScreen>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 4),
                             decoration: BoxDecoration(
-                              color: AppColors.accent.withOpacity(0.15),
+                              color: AppColors.accent.withAlpha(38),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                  color: AppColors.accent.withOpacity(0.3)),
+                                  color: AppColors.accent.withAlpha(76)),
                             ),
                             child: const Text(
                               'Your Career Journey Starts Here',
@@ -337,7 +338,7 @@ class _SplashScreenState extends State<SplashScreen>
               right: 48,
               child: AnimatedBuilder(
                 animation: _progressController,
-                builder: (_, __) => Opacity(
+                builder: (_, _) => Opacity(
                   opacity: _progressValue.value > 0 ? 1.0 : 0.0,
                   child: Column(
                     children: [
@@ -356,7 +357,7 @@ class _SplashScreenState extends State<SplashScreen>
                       Text(
                         'Loading your experience...',
                         style: TextStyle(
-                          color: AppColors.textSecondary.withOpacity(0.7),
+                          color: AppColors.textSecondary.withAlpha(178),
                           fontSize: 12,
                           letterSpacing: 0.5,
                         ),
@@ -390,7 +391,7 @@ class _SplashScreenState extends State<SplashScreen>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
+                color: AppColors.primary.withAlpha(76),
                 blurRadius: 15,
                 offset: const Offset(0, 6),
               ),
@@ -403,7 +404,7 @@ class _SplashScreenState extends State<SplashScreen>
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
+                  color: Colors.white.withAlpha(63),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: Colors.white, size: 24),
@@ -429,7 +430,7 @@ class _SplashScreenState extends State<SplashScreen>
                     Text(
                       subtitle,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withAlpha(230),
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                       ),
@@ -441,7 +442,7 @@ class _SplashScreenState extends State<SplashScreen>
               // Arrow
               Icon(
                 Icons.arrow_forward_rounded,
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withAlpha(230),
                 size: 20,
               ),
             ],

@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+
 class ProgrammeModel {
+  final String? id;
   final String title;
   final String type;
   final String hostOrganisation;
@@ -17,8 +19,12 @@ class ProgrammeModel {
   final String createdBy;
   final Timestamp createdAt;
   final Timestamp updatedAt;
+  final int iconCode;
+  final int iconColor;
+  final double progress;
 
   ProgrammeModel({
+    this.id,
     required this.title,
     required this.type,
     required this.hostOrganisation,
@@ -35,11 +41,15 @@ class ProgrammeModel {
     required this.createdBy,
     required this.createdAt,
     required this.updatedAt,
+    this.iconCode = 0xe80c, // Icons.school_rounded.codePoint
+    this.iconColor = 0xFF0891B2, // kTeal
+    this.progress = 0.0,
   });
 
   factory ProgrammeModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return ProgrammeModel(
+      id: doc.id,
       title: data['title'],
       type: data['type'],
       hostOrganisation: data['hostOrganisation'],
@@ -56,6 +66,13 @@ class ProgrammeModel {
       createdBy: data['createdBy'],
       createdAt: data['createdAt'],
       updatedAt: data['updatedAt'],
+      iconCode: data['iconCode'] is int
+          ? data['iconCode']
+          : 0xe80c,
+      iconColor: data['iconColor'] is int
+          ? data['iconColor']
+          : 0xFF0891B2,
+      progress: (data['progress'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -77,6 +94,9 @@ class ProgrammeModel {
       'createdBy': createdBy,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
+      'iconCode': iconCode,
+      'iconColor': iconColor,
+      'progress': progress,
     };
   }
 }

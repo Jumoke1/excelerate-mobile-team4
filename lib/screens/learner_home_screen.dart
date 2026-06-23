@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../widgets/learner_bottom_nav.dart';
+import '../models/programme_model.dart';
+import '../../widgets/learner_bottom_nav.dart';
 import 'learner_program_details_screen.dart';
 import 'learner_announcements_screen.dart';
 import 'learner_browse_programs_screen.dart';
-import 'learner_login_screen.dart';
 
 const kPrimary = Color(0xFFE0194A);
 const kPurple = Color(0xFF9B59B6);
@@ -150,7 +150,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: kAuthAccentDark.withOpacity(0.08),
+                  color: kAuthAccentDark.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
@@ -225,8 +225,8 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        kAuthAccentDark.withOpacity(_logoGlow.value * 0.3),
-                        kAuthAccentDark.withOpacity(0.0),
+                        kAuthAccentDark.withValues(alpha: _logoGlow.value * 0.3),
+                        kAuthAccentDark.withValues(alpha: 0.0),
                       ],
                     ),
                   ),
@@ -244,7 +244,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: kPrimary.withOpacity(0.3),
+                        color: kPrimary.withValues(alpha: 0.3),
                         blurRadius: 6,
                         spreadRadius: 1,
                       ),
@@ -347,7 +347,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: kPrimary.withOpacity(0.3),
+                color: kPrimary.withValues(alpha: 0.3),
                 blurRadius: 15,
                 offset: const Offset(0, 6),
               ),
@@ -362,10 +362,10 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                          color: Colors.white.withOpacity(0.3), width: 1),
+                          color: Colors.white.withValues(alpha: 0.3), width: 1),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -391,7 +391,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
               Text(
                 'Welcome back,',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.85),
+                  color: Colors.white.withValues(alpha: 0.85),
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
@@ -411,7 +411,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
               Text(
                 "Let's continue your learning journey",
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   fontSize: 13,
                   height: 1.4,
                 ),
@@ -464,7 +464,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
                           Container(
                             height: 8,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.25),
+                              color: Colors.white.withValues(alpha: 0.25),
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -477,7 +477,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
                                 borderRadius: BorderRadius.circular(4),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.white.withOpacity(0.5),
+                                    color: Colors.white.withValues(alpha: 0.5),
                                     blurRadius: 4,
                                   ),
                                 ],
@@ -509,7 +509,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
         border: Border.all(color: kBorder),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -549,7 +549,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
             margin: const EdgeInsets.all(6),
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: kPrimary.withOpacity(0.1),
+              color: kPrimary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
@@ -650,7 +650,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.3),
+            color: color.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -661,7 +661,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: Colors.white, size: 20),
@@ -680,7 +680,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
           Text(
             label,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.95),
+              color: Colors.white.withValues(alpha: 0.95),
               fontSize: 12,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.2,
@@ -690,7 +690,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
           Text(
             subtitle,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.75),
+              color: Colors.white.withValues(alpha: 0.75),
               fontSize: 10,
               fontWeight: FontWeight.w500,
             ),
@@ -738,7 +738,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
                     boxShadow: isSelected
                         ? [
                       BoxShadow(
-                        color: kPrimary.withOpacity(0.25),
+                        color: kPrimary.withValues(alpha: 0.25),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
@@ -886,18 +886,33 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: () {
+          final now = Timestamp.now();
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => LearnerProgramDetailsScreen(
-                program: {
-                  'id': 'demo_${title.hashCode}',
-                  'title': title,
-                  'modules': modules,
-                  'progress': progress,
-                  'iconColor': iconColor.value,
-                  'iconCode': icon.codePoint,
-                },
+                program: ProgrammeModel(
+                  title: title,
+                  type: 'Technology',
+                  hostOrganisation: 'Excelerate',
+                  description: 'Learn and grow with this program.',
+                  skills: const [],
+                  experienceLevel: 'Beginner',
+                  careerFields: const [],
+                  durationWeeks: 6,
+                  weeklyHoursRequired: 4,
+                  applicationDeadline: Timestamp.fromDate(
+                      DateTime.now().add(const Duration(days: 30))),
+                  startDate: now,
+                  isActive: true,
+                  rewards: {},
+                  createdBy: '',
+                  createdAt: now,
+                  updatedAt: now,
+                  iconCode: icon.codePoint,
+                  iconColor: iconColor.toARGB32(),
+                  progress: progress,
+                ),
               ),
             ),
           );
@@ -911,7 +926,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
             border: Border.all(color: kBorder),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -936,7 +951,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: kPrimary.withOpacity(0.1),
+                      color: kPrimary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -1132,7 +1147,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
+                  color: color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: color, size: 20),
@@ -1269,7 +1284,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
         color: kCardBg,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-            color: isNew ? kPrimary.withOpacity(0.2) : kBorder,
+            color: isNew ? kPrimary.withValues(alpha: 0.2) : kBorder,
             width: isNew ? 1.5 : 1),
       ),
       child: Row(
@@ -1279,7 +1294,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.15),
+              color: iconColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: iconColor, size: 20),

@@ -1,38 +1,32 @@
-// lib/screens/login_screen.dart
+// lib/screens/admin/admin_login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'learner_home_screen.dart';
-import 'learner_onboarding_quiz_screen.dart';
-import 'learner_signup_screen.dart';
-import 'learner_forgot_password_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'admin_home_screen.dart';
 
-// ─── Color constants ────────────────────────────────────────────────────
-const kAuthPrimary = Color(0xFF5E35B1);
-const kAuthAccent = Color(0xFFE57373);
-const kAuthAccentDark = Color(0xFFE53935);
-const kAuthFieldBg = Color(0xFFF3E5F5);
-const kAuthFieldBgFocused = Color(0xFFEDE7F6);
-const kAuthBlobPink = Color(0xFFFCE4EC);
-const kAuthBlobLavender = Color(0xFFEDE7F6);
-const kAuthError = Color(0xFFD32F2F);
-const kAuthSuccess = Color(0xFF2E7D32);
-
-const String kWebClientId =
-    '485243538959-ko29fn8camgj9el2e02t6ad31oi4t5pg.apps.googleusercontent.com';
+// ─── Color constants (Admin Blue Theme) ────────────────────────────────
+const kAuthPrimary = Color(0xFF1E40AF);  // ✅ Admin blue (was purple)
+const kAuthAccent = Color(0xFF0EA5E9);   // ✅ Sky blue (was pink)
+const kAuthAccentDark = Color(0xFFDC2626);  // ✅ Admin red (for errors/danger)
+const kAuthFieldBg = Color(0xFFEFF6FF);  // ✅ Light blue
+const kAuthFieldBgFocused = Color(0xFFDBEAFE);  // ✅ Focused blue
+const kAuthBlobBlue = Color(0xFFDBEAFE);  // ✅ Blue blob
+const kAuthBlobSky = Color(0xFFE0F2FE);  // ✅ Sky blue blob
+const kAuthError = Color(0xFFDC2626);
+const kAuthSuccess = Color(0xFF059669);  // ✅ Green (for success)
 
 // ============================================================
-//  LOGIN SCREEN
+//  ADMIN LOGIN SCREEN
 // ============================================================
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class AdminLoginScreen extends StatefulWidget {
+  const AdminLoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<AdminLoginScreen> createState() => _AdminLoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen>
+class _AdminLoginScreenState extends State<AdminLoginScreen>
     with TickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -43,23 +37,26 @@ class _LoginScreenState extends State<LoginScreen>
   bool _keepSignedIn = false;
   bool _submitting = false;
 
-  // Logo animations (scale + glow, no rotation)
-  late final AnimationController _logoScaleController;
-  late final AnimationController _logoGlowController;
-  late final Animation<double> _logoScale;
-  late final Animation<double> _logoGlow;
-
+  // Focus states
   bool _emailFocused = false;
   bool _passwordFocused = false;
 
+  // Validation states
   String? _emailError;
   String? _passwordError;
   bool _emailTouched = false;
   bool _passwordTouched = false;
 
+  // Email regex
   static final RegExp _emailRegex = RegExp(
     r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
   );
+
+  // ✅ Logo animations (scale + glow, no rotation)
+  late final AnimationController _logoScaleController;
+  late final AnimationController _logoGlowController;
+  late final Animation<double> _logoScale;
+  late final Animation<double> _logoGlow;
 
   @override
   void initState() {
@@ -124,15 +121,11 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _onEmailChanged() {
-    if (!_emailTouched) {
-      _emailTouched = true;
-    }
+    if (!_emailTouched) _emailTouched = true;
     final value = _emailController.text.trim();
     if (value.isEmpty) {
       setState(() => _emailError = null);
-      return;
-    }
-    if (!_emailRegex.hasMatch(value)) {
+    } else if (!_emailRegex.hasMatch(value)) {
       setState(() => _emailError = 'Please enter a valid email address');
     } else {
       setState(() => _emailError = null);
@@ -140,15 +133,11 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _onPasswordChanged() {
-    if (!_passwordTouched) {
-      _passwordTouched = true;
-    }
+    if (!_passwordTouched) _passwordTouched = true;
     final value = _passwordController.text;
     if (value.isEmpty) {
       setState(() => _passwordError = null);
-      return;
-    }
-    if (value.length < 6) {
+    } else if (value.length < 6) {
       setState(() => _passwordError = 'Password must be at least 6 characters');
     } else {
       setState(() => _passwordError = null);
@@ -156,56 +145,12 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   bool _isFormValid() {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-    return _emailRegex.hasMatch(email) && password.length >= 6;
+    return _emailRegex.hasMatch(_emailController.text.trim()) &&
+        _passwordController.text.length >= 6;
   }
 
   // ============================================================
-  //  CHECK ONBOARDING STATUS & NAVIGATE
-  // ============================================================
-  Future<void> _checkOnboardingAndNavigate(String uid) async {
-    try {
-      final db = FirebaseFirestore.instance;
-      final userDocRef = db.collection('users').doc(uid);
-      final userDoc = await userDocRef.get();
-
-      if (!mounted) return;
-
-      if (userDoc.exists) {
-        final userData = userDoc.data() as Map<String, dynamic>;
-        final onboardingCompleted = userData['onboardingCompleted'] ?? false;
-
-        if (onboardingCompleted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const LearnerHomeScreen()),
-          );
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const OnboardingQuizScreen()),
-          );
-        }
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const OnboardingQuizScreen()),
-        );
-      }
-    } catch (e) {
-      debugPrint('Onboarding check error: $e');
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LearnerHomeScreen()),
-        );
-      }
-    }
-  }
-
-  // ============================================================
-  //  EMAIL/PASSWORD SIGN IN
+  //  ADMIN LOGIN HANDLER
   // ============================================================
   Future<void> _handleLogin() async {
     setState(() {
@@ -244,35 +189,47 @@ class _LoginScreenState extends State<LoginScreen>
         final userDoc = await userDocRef.get();
 
         if (!userDoc.exists) {
-          await _createFirestoreUserDoc(
+          await _createFirestoreAdminDoc(
             uid: user.uid,
             email: user.email ?? '',
-            name: user.displayName ?? 'User',
-            phone: user.phoneNumber ?? '',
-            photoURL: user.photoURL,
+            name: user.displayName ?? 'Admin',
           );
         } else {
+          final userData = userDoc.data() as Map<String, dynamic>;
+          final role = userData['role'] ?? 'learner';
+
+          if (role != 'admin') {
+            await FirebaseAuth.instance.signOut();
+            _showError('Access denied. Admin credentials required.');
+            return;
+          }
+
           await userDocRef.update({
             'lastActiveAt': FieldValue.serverTimestamp(),
           });
         }
+      }
 
-        await _checkOnboardingAndNavigate(user.uid);
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminHomeScreen()),
+        );
       }
     } on FirebaseAuthException catch (e) {
       String errorMsg = 'Login failed';
       if (e.code == 'user-not-found') {
-        errorMsg = 'No account found. Please sign up first.';
+        errorMsg = 'No admin account found. Contact system administrator.';
       } else if (e.code == 'wrong-password') {
-        errorMsg = 'Incorrect password. Try again.';
+        errorMsg = 'Incorrect password. Try again or contact support.';
       } else if (e.code == 'invalid-email') {
         errorMsg = 'Invalid email address.';
       } else if (e.code == 'user-disabled') {
-        errorMsg = 'This account has been disabled.';
+        errorMsg = 'This account has been disabled. Contact support.';
       } else if (e.code == 'invalid-credential') {
-        errorMsg = 'Invalid email or password.';
+        errorMsg = 'Invalid email or password. Contact support if forgotten.';
       } else if (e.code == 'too-many-requests') {
-        errorMsg = 'Too many attempts. Try again later.';
+        errorMsg = 'Too many attempts. Contact support immediately.';
       } else if (e.message != null) {
         errorMsg = e.message!;
       }
@@ -285,113 +242,12 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   // ============================================================
-  //  GOOGLE SIGN IN
+  //  CREATE FIRESTORE ADMIN DOCUMENT
   // ============================================================
-  Future<void> _handleGoogleSignIn() async {
-    setState(() => _submitting = true);
-    try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(clientId: kWebClientId);
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-
-      if (googleUser == null) {
-        setState(() => _submitting = false);
-        return;
-      }
-
-      final GoogleSignInAuthentication googleAuth =
-      await googleUser.authentication;
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final userCredential =
-      await FirebaseAuth.instance.signInWithCredential(credential);
-
-      final db = FirebaseFirestore.instance;
-      final userDocRef = db.collection('users').doc(userCredential.user!.uid);
-      final userDoc = await userDocRef.get();
-
-      if (!userDoc.exists) {
-        await _createFirestoreUserDoc(
-          uid: userCredential.user!.uid,
-          email: userCredential.user!.email ?? '',
-          name: userCredential.user!.displayName ?? 'New User',
-          phone: userCredential.user!.phoneNumber ?? '',
-          photoURL: userCredential.user!.photoURL,
-        );
-      } else {
-        await userDocRef.update({
-          'lastActiveAt': FieldValue.serverTimestamp(),
-        });
-      }
-
-      await _checkOnboardingAndNavigate(userCredential.user!.uid);
-    } on FirebaseAuthException catch (e) {
-      _showError('Google sign-in failed: ${e.message}');
-    } catch (e) {
-      _showError('Error: ${e.toString()}');
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
-
-  // ============================================================
-  //  GITHUB SIGN IN
-  // ============================================================
-  Future<void> _handleGitHubSignIn() async {
-    setState(() => _submitting = true);
-    try {
-      GithubAuthProvider githubProvider = GithubAuthProvider();
-      githubProvider.addScope('user:email');
-
-      final userCredential =
-      await FirebaseAuth.instance.signInWithPopup(githubProvider);
-
-      final db = FirebaseFirestore.instance;
-      final userDocRef = db.collection('users').doc(userCredential.user!.uid);
-      final userDoc = await userDocRef.get();
-
-      if (!userDoc.exists) {
-        await _createFirestoreUserDoc(
-          uid: userCredential.user!.uid,
-          email: userCredential.user!.email ?? '',
-          name: userCredential.user!.displayName ?? 'New User',
-          phone: userCredential.user!.phoneNumber ?? '',
-          photoURL: userCredential.user!.photoURL,
-        );
-      } else {
-        await userDocRef.update({
-          'lastActiveAt': FieldValue.serverTimestamp(),
-        });
-      }
-
-      await _checkOnboardingAndNavigate(userCredential.user!.uid);
-    } on FirebaseAuthException catch (e) {
-      String errorMsg = 'GitHub sign-in failed';
-      if (e.code == 'account-exists-with-different-credential') {
-        errorMsg = 'Account exists with different sign-in method.';
-      } else if (e.message != null) {
-        errorMsg = e.message!;
-      }
-      _showError(errorMsg);
-    } catch (e) {
-      _showError('Error: ${e.toString()}');
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
-
-  // ============================================================
-  //  HELPER: Create Firestore user documents
-  // ============================================================
-  Future<void> _createFirestoreUserDoc({
+  Future<void> _createFirestoreAdminDoc({
     required String uid,
     required String email,
     required String name,
-    required String phone,
-    String? photoURL,
   }) async {
     final db = FirebaseFirestore.instance;
     final userDocRef = db.collection('users').doc(uid);
@@ -408,70 +264,345 @@ class _LoginScreenState extends State<LoginScreen>
       'uid': uid,
       'email': email,
       'displayName': name,
-      'phone': phone,
-      'photoURL': photoURL,
-      'role': 'learner',
-      'title': 'Learner',
-      'tier': 'Velocity Tier 1',
+      'phone': '',
+      'photoURL': null,
+      'role': 'admin',
+      'title': 'Administrator',
+      'tier': 'Admin',
       'createdAt': FieldValue.serverTimestamp(),
       'lastActiveAt': FieldValue.serverTimestamp(),
-      'onboardingCompleted': false,
-      'linkedExcelerateId': null,
-      'notificationPrefs': {
-        'deadlineReminders': true,
-        'sessionAlerts': true,
-        'progressUpdates': true,
+      'permissions': {
+        'managePrograms': true,
+        'manageUsers': true,
+        'manageNotifications': true,
+        'viewAnalytics': true,
       },
     });
 
-    await db.collection('learnerProfiles').doc(uid).set({
-      'userId': uid,
-      'careerField': null,
-      'experienceLevel': null,
-      'primaryGoal': null,
-      'weeklyHours': null,
-      'targetTimeline': null,
-      'existingCredentials': [],
-      'topPriority': null,
-      'roadmapId': null,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-
-    await db.collection('achievements').doc(uid).set({
-      'userId': uid,
-      'totalXP': 0,
-      'level': 0,
-      'levelName': 'Novice',
-      'badges': [],
-      'certificates': [],
-      'scholarshipsEarned': 0,
-      'completedProgrammes': [],
+    // Log admin login activity
+    await db.collection('audit_logs').add({
+      'action': 'ADMIN_LOGIN',
+      'performedBy': uid,
+      'adminEmail': email,
+      'timestamp': FieldValue.serverTimestamp(),
     });
   }
 
   // ============================================================
-  //  NAVIGATION
+  //  CONTACT SUPPORT
   // ============================================================
-  void _handleForgotPassword() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+  void _showContactSupport() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: kAuthAccent.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: kAuthPrimary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.support_agent_rounded,
+                color: kAuthPrimary,
+                size: 30,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Need Help Signing In?',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Admin accounts are managed securely. Contact our support team for assistance.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.black.withValues(alpha: 0.6),
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 24),
+            _buildContactOption(
+              icon: Icons.email_rounded,
+              title: 'Email Support',
+              subtitle: 'admin-support@excelerate.com',
+              color: kAuthPrimary,
+              onTap: _launchEmail,
+            ),
+            const SizedBox(height: 12),
+            _buildContactOption(
+              icon: Icons.phone_rounded,
+              title: 'Call Support',
+              subtitle: '+1 (800) EXCEL-99',
+              color: kAuthSuccess,
+              onTap: _launchPhone,
+            ),
+            const SizedBox(height: 12),
+            _buildContactOption(
+              icon: Icons.help_outline_rounded,
+              title: 'Help Center',
+              subtitle: 'View documentation & FAQs',
+              color: kAuthAccent,
+              onTap: _showHelpCenter,
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(
+                    color: kAuthAccentDark,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  void _handleSignUp() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const SignupScreen()),
+  Widget _buildContactOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: color.withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: color, size: 20),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.black.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: color,
+                  size: 14,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
+  // ============================================================
+  //  LAUNCH EXTERNAL ACTIONS
+  // ============================================================
+  Future<void> _launchEmail() async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: 'admin-support@excelerate.com',
+      query: 'subject=Admin Login Assistance',
+    );
+
+    try {
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      } else {
+        _showError('Email app not available. Contact: admin-support@excelerate.com');
+      }
+    } catch (e) {
+      _showError('Could not open email. Contact: admin-support@excelerate.com');
+    }
+  }
+
+  Future<void> _launchPhone() async {
+    final Uri phoneUri = Uri(
+      scheme: 'tel',
+      path: '+18003239299',
+    );
+
+    try {
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+      } else {
+        _showError('Phone app not available. Call: +1 (800) EXCEL-99');
+      }
+    } catch (e) {
+      _showError('Could not open phone. Call: +1 (800) EXCEL-99');
+    }
+  }
+
+  // ============================================================
+  //  HELP CENTER
+  // ============================================================
+  void _showHelpCenter() {
+    Navigator.pop(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.help_outline_rounded, color: kAuthPrimary),
+            SizedBox(width: 8),
+            Text('Admin Help Center'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildFaqItem(
+                'How do I get admin access?',
+                'Admin accounts are created by the Super Admin. Contact support to request credentials.',
+              ),
+              const Divider(height: 20),
+              _buildFaqItem(
+                'I forgot my password',
+                'Admin passwords cannot be self-reset. Contact Super Admin for a secure reset.',
+              ),
+              const Divider(height: 20),
+              _buildFaqItem(
+                'Why is my account disabled?',
+                'Accounts may be disabled for security reasons. Contact support to reactivate.',
+              ),
+              const Divider(height: 20),
+              _buildFaqItem(
+                'How to change my password?',
+                'After logging in, go to Profile → Account → Security & Privacy.',
+              ),
+              const Divider(height: 20),
+              _buildFaqItem(
+                'Is admin access secure?',
+                'Yes, all admin actions are logged and monitored for security.',
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFaqItem(String question, String answer) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Q: $question',
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'A: $answer',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.black.withValues(alpha: 0.7),
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================
+  //  ERROR TOAST
+  // ============================================================
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: kAuthAccentDark,
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
@@ -495,7 +626,7 @@ class _LoginScreenState extends State<LoginScreen>
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 30,
                       offset: const Offset(0, 10),
                     ),
@@ -504,13 +635,13 @@ class _LoginScreenState extends State<LoginScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // ✅ Animated Logo
+                    // ✅ Animated Admin Logo (same as learner)
                     Center(child: _buildAnimatedLogo()),
                     const SizedBox(height: 16),
 
-                    // ✅ Brand Title "Excelerate" + "PATHFINDER" (regular text)
+                    // ✅ Brand Title "Excelerate" + "PATHFINDER" + Admin badge
                     Center(child: _buildBrandTitle()),
-                    const SizedBox(height: 36),
+                    const SizedBox(height: 28),
 
                     // Email Field
                     const Text('EMAIL ADDRESS',
@@ -523,7 +654,7 @@ class _LoginScreenState extends State<LoginScreen>
                     _buildTextField(
                       controller: _emailController,
                       focusNode: _emailFocus,
-                      hint: 'Enter your mail-ID',
+                      hint: 'admin@excelerate.com',
                       icon: Icons.mail_outline,
                       focused: _emailFocused,
                       errorText: _emailError,
@@ -587,6 +718,7 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                     const SizedBox(height: 16),
 
+                    // Keep signed in
                     Row(
                       children: [
                         MouseRegion(
@@ -625,8 +757,7 @@ class _LoginScreenState extends State<LoginScreen>
                             : _handleLogin,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: kAuthPrimary,
-                          disabledBackgroundColor:
-                          kAuthPrimary.withOpacity(0.4),
+                          disabledBackgroundColor: kAuthPrimary.withValues(alpha: 0.4),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -644,7 +775,7 @@ class _LoginScreenState extends State<LoginScreen>
                             : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
-                            Icon(Icons.login,
+                            Icon(Icons.admin_panel_settings,
                                 color: Colors.white, size: 20),
                             SizedBox(width: 10),
                             Text(
@@ -659,71 +790,79 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 20),
 
+                    // Divider
                     Row(
                       children: [
-                        const Expanded(child: Divider(color: kAuthAccent)),
+                        Expanded(
+                          child: Divider(
+                            color: kAuthAccent.withValues(alpha: 0.3),
+                            height: 1,
+                          ),
+                        ),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
-                            'OR CONTINUE WITH',
+                            'TROUBLE SIGNING IN?',
                             style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.black.withOpacity(0.5),
+                              fontSize: 10,
+                              color: Colors.black.withValues(alpha: 0.5),
                               letterSpacing: 1.2,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
-                        const Expanded(child: Divider(color: kAuthAccent)),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    Row(
-                      children: [
                         Expanded(
-                          child: _buildSocialButton(
-                            label: 'Google',
-                            icon: const Text('G',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18)),
-                            onPressed:
-                            _submitting ? null : _handleGoogleSignIn,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildSocialButton(
-                            label: 'GitHub',
-                            icon: const Icon(Icons.code, size: 20),
-                            onPressed:
-                            _submitting ? null : _handleGitHubSignIn,
+                          child: Divider(
+                            color: kAuthAccent.withValues(alpha: 0.3),
+                            height: 1,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 16),
 
-                    Center(
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: _handleSignUp,
-                          child: RichText(
-                            text: const TextSpan(
-                              style: TextStyle(
-                                  fontSize: 13, color: Colors.black87),
-                              children: [
-                                TextSpan(text: "Don't have an account? "),
-                                TextSpan(
-                                  text: 'Start your path',
+                    // Contact Support Button
+                    MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _showContactSupport,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              color: kAuthAccentDark.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: kAuthAccentDark.withValues(alpha: 0.3),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Icon(
+                                  Icons.support_agent_rounded,
+                                  color: kAuthAccentDark,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Contact Support',
                                   style: TextStyle(
                                     color: kAuthAccentDark,
-                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
                                   ),
+                                ),
+                                SizedBox(width: 8),
+                                Icon(
+                                  Icons.arrow_forward_rounded,
+                                  color: kAuthAccentDark,
+                                  size: 16,
                                 ),
                               ],
                             ),
@@ -731,6 +870,38 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
                       ),
                     ),
+                    const SizedBox(height: 16),
+
+                    // Security Notice
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: kAuthAccentDark.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: kAuthAccentDark.withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.security,
+                                color: kAuthAccentDark, size: 14),
+                            SizedBox(width: 6),
+                            Text(
+                              'Authorized personnel only',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: kAuthAccentDark,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),
@@ -741,8 +912,18 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  void _handleForgotPassword() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Admin password reset - Contact Super Admin'),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   // ═══════════════════════════════════════════════════════════════
-  //  ✅ ANIMATED LOGO (scale + glow, no rotation)
+  //  ✅ ANIMATED ADMIN LOGO (scale + glow, same as learner)
   // ═══════════════════════════════════════════════════════════════
   Widget _buildAnimatedLogo() {
     return AnimatedBuilder(
@@ -767,26 +948,26 @@ class _LoginScreenState extends State<LoginScreen>
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        kAuthAccentDark.withOpacity(_logoGlow.value * 0.4),
-                        kAuthAccentDark.withOpacity(0.0),
+                        kAuthAccent.withValues(alpha: _logoGlow.value * 0.4),
+                        kAuthAccent.withValues(alpha: 0.0),
                       ],
                     ),
                   ),
                 ),
-                // Main logo body
+                // Main logo body - Admin themed (blue gradient + shield)
                 Container(
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: const LinearGradient(
-                      colors: [kAuthPrimary, kAuthAccentDark],
+                      colors: [kAuthPrimary, kAuthAccent],  // ✅ Blue gradient (was purple→red)
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: kAuthAccentDark.withOpacity(0.4),
+                        color: kAuthPrimary.withValues(alpha: 0.4),
                         blurRadius: 12,
                         spreadRadius: 1,
                       ),
@@ -794,7 +975,7 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                   child: const Center(
                     child: Icon(
-                      Icons.rocket_launch_rounded,
+                      Icons.admin_panel_settings_rounded,  // ✅ Admin shield (was rocket)
                       color: Colors.white,
                       size: 36,
                     ),
@@ -809,13 +990,13 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   // ═══════════════════════════════════════════════════════════════
-  //  ✅ BRAND TITLE - Regular "E" + "xcelerate" + "PATHFINDER" pill
+  //  ✅ BRAND TITLE - "Excelerate" + "PATHFINDER" + Admin badge
   // ═══════════════════════════════════════════════════════════════
   Widget _buildBrandTitle() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // ✅ Regular "Excelerate" text (normal E character)
+        // ✅ Regular "Excelerate" text
         const Text(
           'Excelerate',
           style: TextStyle(
@@ -831,7 +1012,7 @@ class _LoginScreenState extends State<LoginScreen>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
           decoration: BoxDecoration(
-            color: kAuthAccentDark.withOpacity(0.08),
+            color: kAuthAccentDark.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Text(
@@ -842,6 +1023,32 @@ class _LoginScreenState extends State<LoginScreen>
               color: kAuthPrimary,
               letterSpacing: 3.0,
             ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // ✅ Admin badge (distinguishes from learner)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: kAuthPrimary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: kAuthPrimary, width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.shield_rounded, color: kAuthPrimary, size: 12),
+              const SizedBox(width: 4),
+              Text(
+                'ADMIN PORTAL',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  color: kAuthPrimary,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -877,7 +1084,7 @@ class _LoginScreenState extends State<LoginScreen>
       iconColor = kAuthPrimary;
     } else {
       borderColor = kAuthAccent;
-      bgColor = kAuthFieldBg.withOpacity(0.5);
+      bgColor = kAuthFieldBg.withValues(alpha: 0.5);
       iconColor = kAuthAccent;
     }
 
@@ -897,7 +1104,7 @@ class _LoginScreenState extends State<LoginScreen>
             boxShadow: focused
                 ? [
               BoxShadow(
-                color: kAuthPrimary.withOpacity(0.12),
+                color: kAuthPrimary.withValues(alpha: 0.12),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -915,7 +1122,7 @@ class _LoginScreenState extends State<LoginScreen>
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(
-                color: Colors.black.withOpacity(0.35),
+                color: Colors.black.withValues(alpha: 0.35),
                 fontSize: 14,
               ),
               prefixIcon: Padding(
@@ -962,43 +1169,10 @@ class _LoginScreenState extends State<LoginScreen>
       ],
     );
   }
-
-  Widget _buildSocialButton({
-    required String label,
-    required Widget icon,
-    required VoidCallback? onPressed,
-  }) {
-    return OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        side: const BorderSide(color: kAuthAccent, width: 1.2),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        backgroundColor: Colors.white,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          icon,
-          const SizedBox(width: 10),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 15,
-              color: Colors.black87,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ============================================================
-//  GRADIENT BACKGROUND
+//  GRADIENT BACKGROUND (Blue theme for admin)
 // ============================================================
 class _GradientBackground extends StatelessWidget {
   final Widget child;
@@ -1009,6 +1183,7 @@ class _GradientBackground extends StatelessWidget {
     return Stack(
       children: [
         Container(color: Colors.white),
+        // ✅ Blue blob (was pink)
         Positioned(
           top: -120,
           left: -120,
@@ -1019,13 +1194,14 @@ class _GradientBackground extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  kAuthBlobPink.withOpacity(0.7),
-                  kAuthBlobPink.withOpacity(0.0),
+                  kAuthBlobBlue.withValues(alpha: 0.7),
+                  kAuthBlobBlue.withValues(alpha: 0.0),
                 ],
               ),
             ),
           ),
         ),
+        // ✅ Sky blue blob (was pink)
         Positioned(
           bottom: -150,
           right: -150,
@@ -1036,13 +1212,14 @@ class _GradientBackground extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  const Color(0xFFF8BBD0).withOpacity(0.4),
-                  const Color(0xFFF8BBD0).withOpacity(0.0),
+                  kAuthBlobSky.withValues(alpha: 0.5),
+                  kAuthBlobSky.withValues(alpha: 0.0),
                 ],
               ),
             ),
           ),
         ),
+        // ✅ Light blue overlay (was lavender)
         Positioned(
           top: 150,
           left: 50,
@@ -1054,14 +1231,14 @@ class _GradientBackground extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  kAuthBlobLavender.withOpacity(0.35),
-                  kAuthBlobLavender.withOpacity(0.0),
+                  kAuthBlobBlue.withValues(alpha: 0.3),
+                  kAuthBlobBlue.withValues(alpha: 0.0),
                 ],
               ),
             ),
           ),
         ),
-        child!,
+        child,
       ],
     );
   }

@@ -2,12 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../widgets/admin_bottom_nav.dart';
+import '../../../widgets/admin_bottom_nav.dart';
 import 'admin_users_screen.dart';
 import 'admin_programs_screen.dart';
 import 'admin_announcements_screen.dart';
 import 'admin_analytics_screen.dart';
-import 'admin_profile_screen.dart';
 
 const kAdminPrimary = Color(0xFF1E40AF);
 const kAdminAccent = Color(0xFF0EA5E9);
@@ -113,7 +112,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '$_adminName',
+                _adminName,
                 style: const TextStyle(
                   color: kFg,
                   fontWeight: FontWeight.w900,
@@ -192,7 +191,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: kAdminPrimary.withOpacity(0.3),
+            color: kAdminPrimary.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 6),
           ),
@@ -207,10 +206,10 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 padding:
                 const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                      color: Colors.white.withOpacity(0.3), width: 1),
+                      color: Colors.white.withValues(alpha: 0.3), width: 1),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -236,7 +235,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           Text(
             'Welcome back,',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.85),
+              color: Colors.white.withValues(alpha: 0.85),
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
@@ -256,7 +255,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           Text(
             "Here's what's happening on your platform",
             style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               fontSize: 13,
               height: 1.4,
             ),
@@ -289,7 +288,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: kAdminWarning.withOpacity(0.1),
+                color: kAdminWarning.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: kAdminWarning, width: 1.5),
               ),
@@ -413,7 +412,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.3),
+            color: color.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -424,7 +423,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: Colors.white, size: 20),
@@ -443,7 +442,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           Text(
             label,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.95),
+              color: Colors.white.withValues(alpha: 0.95),
               fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
@@ -452,7 +451,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           Text(
             subtitle,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.75),
+              color: Colors.white.withValues(alpha: 0.75),
               fontSize: 9,
               fontWeight: FontWeight.w500,
             ),
@@ -549,7 +548,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: _getActionColor(action).withOpacity(0.15),
+              color: _getActionColor(action).withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(_getActionIcon(action),
@@ -655,7 +654,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: (action['color'] as Color).withOpacity(0.15),
+                  color: (action['color'] as Color).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(action['icon'] as IconData,
@@ -694,7 +693,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: kAdminSuccess.withOpacity(0.15),
+                  color: kAdminSuccess.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.health_and_safety,
@@ -709,7 +708,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: kAdminSuccess.withOpacity(0.15),
+                  color: kAdminSuccess.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text(

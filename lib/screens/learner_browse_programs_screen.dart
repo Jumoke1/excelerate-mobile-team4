@@ -1,7 +1,9 @@
+
 // lib/screens/learner_browse_programs_screen.dart
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'learner_program_details_screen.dart';
+import '../models/programme_model.dart';
+import '../services/programme_service.dart';
 
 const kPrimary = Color(0xFFE0194A);
 const kPurple = Color(0xFF9B59B6);
@@ -27,6 +29,7 @@ class _LearnerBrowseProgramsScreenState
     extends State<LearnerBrowseProgramsScreen> {
   String _selectedFilter = 'All';
   final TextEditingController _searchCtrl = TextEditingController();
+  late Future<List<ProgrammeModel>> _programsFuture;
 
   @override
   void initState() {
@@ -34,94 +37,13 @@ class _LearnerBrowseProgramsScreenState
     if (widget.searchQuery != null) {
       _searchCtrl.text = widget.searchQuery!;
     }
+    _programsFuture = ProgrammeService().getProgrammes();
   }
 
   @override
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
-  }
-
-  final List<Map<String, dynamic>> _programs = [
-    {
-      'id': 'prog_001',
-      'title': 'Digital Marketing Fundamentals',
-      'category': 'Marketing',
-      'modules': '12 modules',
-      'duration': '8 weeks',
-      'progress': 0.67,
-      'iconColor': kTeal.value,
-      'iconCode': Icons.menu_book_rounded.codePoint,
-      'level': 'Beginner',
-    },
-    {
-      'id': 'prog_002',
-      'title': 'Agile & Scrum Methodology',
-      'category': 'Business',
-      'modules': '10 modules',
-      'duration': '6 weeks',
-      'progress': 0.50,
-      'iconColor': kPurple.value,
-      'iconCode': Icons.people_alt_rounded.codePoint,
-      'level': 'Intermediate',
-    },
-    {
-      'id': 'prog_003',
-      'title': 'Data Science with Python',
-      'category': 'Technology',
-      'modules': '15 modules',
-      'duration': '12 weeks',
-      'progress': 0.0,
-      'iconColor': kOrange.value,
-      'iconCode': Icons.bar_chart_rounded.codePoint,
-      'level': 'Advanced',
-    },
-    {
-      'id': 'prog_004',
-      'title': 'UX/UI Design Bootcamp',
-      'category': 'Design',
-      'modules': '14 modules',
-      'duration': '10 weeks',
-      'progress': 0.25,
-      'iconColor': kPrimary.value,
-      'iconCode': Icons.palette_rounded.codePoint,
-      'level': 'Intermediate',
-    },
-    {
-      'id': 'prog_005',
-      'title': 'Sales & Negotiation Mastery',
-      'category': 'Business',
-      'modules': '8 modules',
-      'duration': '5 weeks',
-      'progress': 0.0,
-      'iconColor': kPurple.value,
-      'iconCode': Icons.handshake_rounded.codePoint,
-      'level': 'Beginner',
-    },
-    {
-      'id': 'prog_006',
-      'title': 'Full-Stack Web Development',
-      'category': 'Technology',
-      'modules': '20 modules',
-      'duration': '16 weeks',
-      'progress': 0.10,
-      'iconColor': kTeal.value,
-      'iconCode': Icons.code_rounded.codePoint,
-      'level': 'Advanced',
-    },
-  ];
-
-  List<Map<String, dynamic>> get _filteredPrograms {
-    var list = _programs;
-    if (_selectedFilter != 'All') {
-      list = list.where((p) => p['category'] == _selectedFilter).toList();
-    }
-    if (_searchCtrl.text.isNotEmpty) {
-      final q = _searchCtrl.text.toLowerCase();
-      list = list.where((p) =>
-          (p['title'] as String).toLowerCase().contains(q)).toList();
-    }
-    return list;
   }
 
   @override
@@ -264,46 +186,92 @@ class _LearnerBrowseProgramsScreenState
   }
 
   Widget _buildProgramsGrid() {
-    final programs = _filteredPrograms;
-    if (programs.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.search_off, size: 48, color: kMutedFg),
-            const SizedBox(height: 12),
-            Text(
-              'No programs found',
-              style: TextStyle(
-                fontSize: 14,
-                color: kMutedFg,
-                fontWeight: FontWeight.w600,
+    return FutureBuilder<List<ProgrammeModel>>(
+        future: _programsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.search_off, size: 48, color: kMutedFg),
+                  SizedBox(height: 12),
+                  Text(
+                    'No programs found',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: kMutedFg,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
+            );
+          }
+
+          final allPrograms = snapshot.data!;
+          var filteredPrograms = allPrograms;
+          if (_selectedFilter != 'All') {
+            filteredPrograms = filteredPrograms
+                .where((p) => p.type == _selectedFilter)
+                .toList();
+          }
+          if (_searchCtrl.text.isNotEmpty) {
+            final q = _searchCtrl.text.toLowerCase();
+            filteredPrograms = filteredPrograms
+                .where((p) => p.title.toLowerCase().contains(q))
+                .toList();
+          }
+
+          if (filteredPrograms.isEmpty) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.search_off, size: 48, color: kMutedFg),
+                  SizedBox(height: 12),
+                  Text(
+                    'No programs found for your criteria',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: kMutedFg,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return GridView.builder(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.85,
             ),
-          ],
-        ),
-      );
-    }
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.85,
-      ),
-      itemCount: programs.length,
-      itemBuilder: (context, index) {
-        return _buildProgramGridCard(programs[index]);
-      },
-    );
+            itemCount: filteredPrograms.length,
+            itemBuilder: (context, index) {
+              return _buildProgramGridCard(filteredPrograms[index]);
+            },
+          );
+        });
   }
 
-  Widget _buildProgramGridCard(Map<String, dynamic> program) {
-    final iconCode = program['iconCode'] as int;
-    final iconColor = Color(program['iconColor'] as int);
-    final progress = program['progress'] as double;
-    final isStarted = progress > 0;
+  Widget _buildProgramGridCard(ProgrammeModel program) {
+    const iconColor = kTeal;
+
+    const progress = 0.0;
+    const isStarted = progress > 0;
+    final duration = '${program.durationWeeks} weeks';
+    const modules = '... modules';
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -313,16 +281,7 @@ class _LearnerBrowseProgramsScreenState
             context,
             MaterialPageRoute(
               builder: (_) => LearnerProgramDetailsScreen(
-                program: {
-                  'id': program['id'],
-                  'title': program['title'],
-                  'modules': isStarted
-                      ? '${(progress * 12).round()} of 12 modules completed'
-                      : '0 of 12 modules completed',
-                  'progress': progress,
-                  'iconColor': iconColor.value,
-                  'iconCode': iconCode,
-                },
+                program: program,
               ),
             ),
           );
@@ -343,7 +302,7 @@ class _LearnerBrowseProgramsScreenState
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [iconColor, iconColor.withOpacity(0.7)],
+                    colors: [iconColor, iconColor.withValues(alpha: 0.7)],
                   ),
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(14),
@@ -351,7 +310,7 @@ class _LearnerBrowseProgramsScreenState
                 ),
                 child: Center(
                   child: Icon(
-                    IconData(iconCode, fontFamily: 'MaterialIcons'),
+                    Icons.school_rounded,
                     color: Colors.white,
                     size: 36,
                   ),
@@ -363,7 +322,7 @@ class _LearnerBrowseProgramsScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      program['title'] as String,
+                      program.title,
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
@@ -379,9 +338,9 @@ class _LearnerBrowseProgramsScreenState
                         const Icon(Icons.book_outlined,
                             size: 11, color: kMutedFg),
                         const SizedBox(width: 4),
-                        Text(
-                          program['modules'] as String,
-                          style: const TextStyle(
+                        const Text(
+                          modules,
+                          style: TextStyle(
                             fontSize: 10,
                             color: kMutedFg,
                           ),
@@ -395,7 +354,7 @@ class _LearnerBrowseProgramsScreenState
                             size: 11, color: kMutedFg),
                         const SizedBox(width: 4),
                         Text(
-                          program['duration'] as String,
+                          duration,
                           style: const TextStyle(
                             fontSize: 10,
                             color: kMutedFg,
@@ -431,7 +390,7 @@ class _LearnerBrowseProgramsScreenState
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: kPrimary.withOpacity(0.1),
+                          color: kPrimary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: const Text(

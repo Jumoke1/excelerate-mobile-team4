@@ -6,6 +6,7 @@ class ProgrammeService {
       FirebaseFirestore.instance.collection('programmes');
 
   Future<DocumentReference> createProgramme(ProgrammeModel programme) {
+     // print(" Writing to Firestore...");
     return _programmesCollection.add(programme.toFirestore());
   }
 
@@ -24,4 +25,11 @@ class ProgrammeService {
   Future<void> deleteProgramme(String programmeId) {
     return _programmesCollection.doc(programmeId).delete();
   }
+  Future<List<ProgrammeModel>> getProgrammes() async {
+  final snapshot = await _programmesCollection.get();
+
+  return snapshot.docs
+      .map((doc) => ProgrammeModel.fromFirestore(doc))
+      .toList();
+}
 }

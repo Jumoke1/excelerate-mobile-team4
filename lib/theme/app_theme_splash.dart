@@ -137,7 +137,6 @@ ThemeData buildAppTheme() {
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
       seedColor: AppColors.primary,
-      background: AppColors.background,
       surface: AppColors.surface,
     ),
     scaffoldBackgroundColor: AppColors.background,

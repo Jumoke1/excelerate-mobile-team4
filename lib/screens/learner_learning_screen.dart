@@ -1,6 +1,6 @@
 // lib/screens/learner_learning_screen.dart
 import 'package:flutter/material.dart';
-import '../widgets/learner_bottom_nav.dart';
+import '../../widgets/learner_bottom_nav.dart';
 import 'learner_home_screen.dart';
 
 const kPrimary = Color(0xFFE0194A);
@@ -111,7 +111,7 @@ class LearnerLearningScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: kRed.withOpacity(0.3),
+            color: kRed.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 6),
           ),
@@ -251,7 +251,7 @@ class LearnerLearningScreen extends StatelessWidget {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: sessionColor.withOpacity(0.15),
+              color: sessionColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -362,7 +362,7 @@ class LearnerLearningScreen extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.25),
+              color: Colors.white.withValues(alpha: 0.25),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: Colors.white, size: 20),
@@ -384,7 +384,7 @@ class LearnerLearningScreen extends StatelessWidget {
               Text(
                 lessons,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.85),
+                  color: Colors.white.withValues(alpha: 0.85),
                   fontSize: 10,
                 ),
               ),
