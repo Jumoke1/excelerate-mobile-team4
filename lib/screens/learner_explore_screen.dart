@@ -1,9 +1,12 @@
-// lib/screens/learner_explore_screen.dart
+
 import 'package:flutter/material.dart';
-import '../../widgets/learner_bottom_nav.dart';
+import '../widgets/learner_bottom_nav.dart';
 import 'learner_program_details_screen.dart';
 import 'learner_home_screen.dart';
+import '../services/program_service.dart';
+import '../models/programme_model.dart';
 
+//  CONSTANTS DEFINED HERE 
 const kPrimary = Color(0xFFE0194A);
 const kPurple = Color(0xFF9B59B6);
 const kBg = Color(0xFFF7F7F7);
@@ -14,6 +17,7 @@ const kFg = Colors.black;
 const kTeal = Color(0xFF0891B2);
 const kOrange = Color(0xFFEA580C);
 
+
 class LearnerExploreScreen extends StatefulWidget {
   const LearnerExploreScreen({super.key});
 
@@ -23,98 +27,30 @@ class LearnerExploreScreen extends StatefulWidget {
 
 class _LearnerExploreScreenState extends State<LearnerExploreScreen> {
   String _selectedCategory = 'All';
+  final ProgrammeService _programmeService = ProgrammeService();
+  List<String> _categories = ['All'];
+  bool _isLoadingCategories = true;
 
-  final List<Map<String, dynamic>> _programs = [
-    {
-      'id': 'p1',
-      'title': 'AI & Machine Learning',
-      'category': 'Technology',
-      'instructor': 'Dr. Sarah Chen',
-      'duration': '12 weeks',
-      'students': 1234,
-      'rating': 4.8,
-      'iconColor': kTeal.value,
-      'iconCode': Icons.psychology_rounded.codePoint,
-      'tag': 'Popular',
-    },
-    {
-      'id': 'p2',
-      'title': 'Digital Marketing Pro',
-      'category': 'Marketing',
-      'instructor': 'Marcus Thorne',
-      'duration': '8 weeks',
-      'students': 892,
-      'rating': 4.6,
-      'iconColor': kOrange.value,
-      'iconCode': Icons.trending_up_rounded.codePoint,
-      'tag': 'New',
-    },
-    {
-      'id': 'p3',
-      'title': 'UX/UI Design Bootcamp',
-      'category': 'Design',
-      'instructor': 'Emma Wilson',
-      'duration': '10 weeks',
-      'students': 2103,
-      'rating': 4.9,
-      'iconColor': kPurple.value,
-      'iconCode': Icons.palette_rounded.codePoint,
-      'tag': 'Trending',
-    },
-    {
-      'id': 'p4',
-      'title': 'Full-Stack Web Development',
-      'category': 'Technology',
-      'instructor': 'James Rodriguez',
-      'duration': '16 weeks',
-      'students': 3456,
-      'rating': 4.7,
-      'iconColor': kPrimary.value,
-      'iconCode': Icons.code_rounded.codePoint,
-      'tag': 'Bestseller',
-    },
-    {
-      'id': 'p5',
-      'title': 'Business Strategy Mastery',
-      'category': 'Business',
-      'instructor': 'Lisa Anderson',
-      'duration': '6 weeks',
-      'students': 567,
-      'rating': 4.5,
-      'iconColor': kTeal.value,
-      'iconCode': Icons.business_center_rounded.codePoint,
-      'tag': null,
-    },
-    {
-      'id': 'p6',
-      'title': 'Data Science with Python',
-      'category': 'Technology',
-      'instructor': 'Dr. Raj Patel',
-      'duration': '14 weeks',
-      'students': 1890,
-      'rating': 4.8,
-      'iconColor': kOrange.value,
-      'iconCode': Icons.bar_chart_rounded.codePoint,
-      'tag': 'Popular',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
 
-  final List<Map<String, dynamic>> _competitions = [
-    {
-      'title': 'Startup Pitch Challenge',
-      'prize': '\$5,000',
-      'teams': 42,
-      'daysLeft': 3,
-      'color': kPurple,
-    },
-    {
-      'title': 'FinTech Algorithm Contest',
-      'prize': '\$2,500',
-      'teams': 18,
-      'daysLeft': 7,
-      'color': kOrange,
-    },
-  ];
+  Future<void> _loadCategories() async {
+    try {
+      final categories = await _programmeService.getCategories();
+      setState(() {
+        _categories = ['All', ...categories];
+        _isLoadingCategories = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingCategories = false;
+      });
+      print('Error loading categories: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +69,7 @@ class _LearnerExploreScreenState extends State<LearnerExploreScreen> {
               const SizedBox(height: 20),
               _buildFeaturedBanner(),
               const SizedBox(height: 24),
-              _buildSectionTitle('Programs', '${_programs.length} available'),
+              _buildSectionTitle('Programs', 'Available programs'),
               const SizedBox(height: 12),
               _buildProgramsList(),
               const SizedBox(height: 24),
@@ -154,12 +90,10 @@ class _LearnerExploreScreenState extends State<LearnerExploreScreen> {
   Widget _buildHeader() {
     return Row(
       children: [
-        // ✅ Back button - navigates to LearnerHomeScreen
         MouseRegion(
           cursor: SystemMouseCursors.click,
           child: GestureDetector(
             onTap: () {
-              // Use pushReplacement to avoid stacking screens
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
@@ -204,12 +138,31 @@ class _LearnerExploreScreenState extends State<LearnerExploreScreen> {
   }
 
   Widget _buildCategories() {
-    final categories = ['All', 'Technology', 'Business', 'Marketing', 'Design'];
+    if (_isLoadingCategories) {
+      return SizedBox(
+        height: 36,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          children: List.generate(5, (index) => Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Container(
+              width: 80,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+          )),
+        ),
+      );
+    }
+
     return SizedBox(
       height: 36,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        children: categories.map((cat) {
+        children: _categories.map((cat) {
           final isSelected = _selectedCategory == cat;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -344,20 +297,94 @@ class _LearnerExploreScreenState extends State<LearnerExploreScreen> {
   }
 
   Widget _buildProgramsList() {
-    final filtered = _selectedCategory == 'All'
-        ? _programs
-        : _programs.where((p) => p['category'] == _selectedCategory).toList();
+    return StreamBuilder<List<ProgrammeModel>>(
+      stream: _selectedCategory == 'All'
+          ? _programmeService.getActivePrograms()
+          : _programmeService.getActiveProgramsByCategory(_selectedCategory),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: kCardBg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: kBorder),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.error_outline, color: kPrimary, size: 32),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Error loading programs',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    snapshot.error.toString(),
+                    style: const TextStyle(fontSize: 12, color: kMutedFg),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
 
-    return Column(
-      children: filtered.map((p) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: _buildProgramCard(p),
-      )).toList(),
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Column(
+            children: List.generate(3, (index) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Container(
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            )),
+          );
+        }
+
+        final programs = snapshot.data ?? [];
+
+        if (programs.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: kCardBg,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: kBorder),
+            ),
+            child: const Center(
+              child: Column(
+                children: [
+                  Icon(Icons.search_off, size: 32, color: kMutedFg),
+                  SizedBox(height: 8),
+                  Text(
+                    'No programs available in this category',
+                    style: TextStyle(color: kMutedFg),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return Column(
+          children: programs.map((program) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _buildProgramCard(program),
+          )).toList(),
+        );
+      },
     );
   }
 
-  Widget _buildProgramCard(Map<String, dynamic> program) {
-    final iconColor = Color(program['iconColor'] as int);
+  Widget _buildProgramCard(ProgrammeModel program) {
+    final iconColor = program.getTypeColor();
+    final iconData = program.getTypeIcon();
+    final tag = program.getTag();
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
@@ -367,12 +394,17 @@ class _LearnerExploreScreenState extends State<LearnerExploreScreen> {
             MaterialPageRoute(
               builder: (_) => LearnerProgramDetailsScreen(
                 program: {
-                  'id': program['id'],
-                  'title': program['title'],
-                  'modules': '0 of 12 modules',
+                  'id': program.id,
+                  'title': program.title,
+                  'modules': '${program.durationWeeks} weeks',
                   'progress': 0.0,
                   'iconColor': iconColor.value,
-                  'iconCode': program['iconCode'],
+                  'iconCode': iconData.codePoint,
+                  'description': program.description,
+                  'hostOrganisation': program.hostOrganisation,
+                  'skills': program.skills,
+                  'experienceLevel': program.experienceLevel,
+                  'weeklyHoursRequired': program.weeklyHoursRequired,
                 },
               ),
             ),
@@ -395,7 +427,7 @@ class _LearnerExploreScreenState extends State<LearnerExploreScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  IconData(program['iconCode'], fontFamily: 'MaterialIcons'),
+                  iconData,
                   color: Colors.white,
                   size: 28,
                 ),
@@ -409,7 +441,7 @@ class _LearnerExploreScreenState extends State<LearnerExploreScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            program['title'],
+                            program.title,
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w800,
@@ -419,7 +451,7 @@ class _LearnerExploreScreenState extends State<LearnerExploreScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (program['tag'] != null) ...[
+                        if (tag != null) ...[
                           const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -429,7 +461,7 @@ class _LearnerExploreScreenState extends State<LearnerExploreScreen> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              program['tag'],
+                              tag,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 8,
@@ -443,7 +475,7 @@ class _LearnerExploreScreenState extends State<LearnerExploreScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '👤 ${program['instructor']}',
+                      '🏢 ${program.hostOrganisation}',
                       style: const TextStyle(fontSize: 11, color: kMutedFg),
                     ),
                     const SizedBox(height: 6),
@@ -452,21 +484,21 @@ class _LearnerExploreScreenState extends State<LearnerExploreScreen> {
                         const Icon(Icons.access_time, size: 11, color: kMutedFg),
                         const SizedBox(width: 3),
                         Text(
-                          program['duration'],
+                          '${program.durationWeeks} weeks',
                           style: const TextStyle(fontSize: 10, color: kMutedFg),
                         ),
                         const SizedBox(width: 10),
-                        const Icon(Icons.people, size: 11, color: kMutedFg),
+                        const Icon(Icons.schedule, size: 11, color: kMutedFg),
                         const SizedBox(width: 3),
                         Text(
-                          '${program['students']}',
+                          '${program.weeklyHoursRequired}h/wk',
                           style: const TextStyle(fontSize: 10, color: kMutedFg),
                         ),
                         const SizedBox(width: 10),
-                        const Icon(Icons.star, size: 11, color: Color(0xFFF59E0B)),
+                        const Icon(Icons.work, size: 11, color: kMutedFg),
                         const SizedBox(width: 3),
                         Text(
-                          program['rating'].toString(),
+                          program.experienceLevel,
                           style: const TextStyle(
                             fontSize: 10,
                             color: kMutedFg,
@@ -484,6 +516,24 @@ class _LearnerExploreScreenState extends State<LearnerExploreScreen> {
       ),
     );
   }
+
+  // Competitions
+  final List<Map<String, dynamic>> _competitions = [
+    {
+      'title': 'Startup Pitch Challenge',
+      'prize': '\$5,000',
+      'teams': 42,
+      'daysLeft': 3,
+      'color': kPurple,
+    },
+    {
+      'title': 'FinTech Algorithm Contest',
+      'prize': '\$2,500',
+      'teams': 18,
+      'daysLeft': 7,
+      'color': kOrange,
+    },
+  ];
 
   Widget _buildCompetitionsList() {
     return Column(

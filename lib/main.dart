@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'seeds/programme_seed.dart';
+import 'seed/seed_programs.dart';
 
 import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
+import 'delete_duplicates.dart'; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-   await seedProgrammes();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  //await seedPrograms();
+  await deleteFrontendPrograms();
 
   runApp(const ExcelerateApp());
 }

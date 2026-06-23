@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../../widgets/learner_bottom_nav.dart';
+
+import '../widgets/learner_bottom_nav.dart';
 import 'learner_program_details_screen.dart';
 import 'learner_announcements_screen.dart';
 import 'learner_browse_programs_screen.dart';
@@ -204,10 +205,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
   // ════════════════════════════════════════════════════════════════════
   Widget _buildAnimatedLogo() {
     return AnimatedBuilder(
-      animation: Listenable.merge([
-        _logoScaleController,
-        _logoGlowController,
-      ]),
+      animation: Listenable.merge([_logoScaleController, _logoGlowController]),
       builder: (context, child) {
         return Transform.scale(
           scale: _logoScale.value,
@@ -294,7 +292,9 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
                 right: -2,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 5, vertical: 1),
+                    horizontal: 5,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     color: kPrimary,
                     borderRadius: BorderRadius.circular(10),
@@ -331,7 +331,8 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
         if (snapshot.hasData && snapshot.data!.exists) {
           final data = snapshot.data!.data();
           if (data is Map) {
-            firstName = (data['displayName'] as String?)?.split(' ').first ?? 'Learner';
+            firstName =
+                (data['displayName'] as String?)?.split(' ').first ?? 'Learner';
             tier = (data['tier'] as String?) ?? 'Velocity Tier 1';
           }
         }
@@ -360,18 +361,25 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                          color: Colors.white.withOpacity(0.3), width: 1),
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.bolt_rounded,
-                            color: Colors.white, size: 12),
+                        const Icon(
+                          Icons.bolt_rounded,
+                          color: Colors.white,
+                          size: 12,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           tier.toUpperCase(),
@@ -424,7 +432,8 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
                   int totalXP = 390;
                   int level = 1;
                   if (achSnapshot.hasData && achSnapshot.data!.exists) {
-                    final data = achSnapshot.data!.data() as Map<String, dynamic>?;
+                    final data =
+                        achSnapshot.data!.data() as Map<String, dynamic>?;
                     if (data != null) {
                       totalXP = (data['totalXP'] as int?) ?? 390;
                       level = (data['level'] as int?) ?? 1;
@@ -552,11 +561,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
               color: kPrimary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(
-              Icons.tune_rounded,
-              color: kPrimary,
-              size: 18,
-            ),
+            child: const Icon(Icons.tune_rounded, color: kPrimary, size: 18),
           ),
         ],
       ),
@@ -583,7 +588,9 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
           if (data != null) {
             try {
               final completedList = data['completedProgrammes'];
-              completedCount = (completedList is List) ? completedList.length : 12;
+              completedCount = (completedList is List)
+                  ? completedList.length
+                  : 12;
               final totalXP = (data['totalXP'] as int?) ?? 390;
               progress = totalXP > 0 ? ((totalXP % 500) / 500) : 0.78;
               if (progress == 0) progress = 0.78;
@@ -600,7 +607,11 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
     );
   }
 
-  Widget _buildStatsRowContent(int activeCount, double progress, int completedCount) {
+  Widget _buildStatsRowContent(
+    int activeCount,
+    double progress,
+    int completedCount,
+  ) {
     return Row(
       children: [
         Expanded(
@@ -728,21 +739,22 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
                 onTap: () => setState(() => _selectedCategoryIndex = index),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected ? kPrimary : kCardBg,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isSelected ? kPrimary : kBorder,
-                    ),
+                    border: Border.all(color: isSelected ? kPrimary : kBorder),
                     boxShadow: isSelected
                         ? [
-                      BoxShadow(
-                        color: kPrimary.withOpacity(0.25),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ]
+                            BoxShadow(
+                              color: kPrimary.withOpacity(0.25),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
                         : null,
                   ),
                   child: Row(
@@ -856,8 +868,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
             itemBuilder: (context, index) {
               final p = programs[index];
               return Padding(
-                padding: EdgeInsets.only(
-                    right: 12, left: index == 0 ? 0 : 0),
+                padding: EdgeInsets.only(right: 12, left: index == 0 ? 0 : 0),
                 child: _buildProgramCard(
                   title: p['title'] as String,
                   modules: p['modules'] as String,
@@ -934,7 +945,9 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: kPrimary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(6),
@@ -1002,8 +1015,11 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
                       color: kPrimary,
                     ),
                   ),
-                  const Icon(Icons.arrow_forward_rounded,
-                      color: kPrimary, size: 16),
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: kPrimary,
+                    size: 16,
+                  ),
                 ],
               ),
             ],
@@ -1151,7 +1167,9 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
               if (badge != null) ...[
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 7, vertical: 2),
+                    horizontal: 7,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: kPrimary,
                     borderRadius: BorderRadius.circular(10),
@@ -1167,8 +1185,11 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
                 ),
                 const SizedBox(width: 6),
               ],
-              const Icon(Icons.arrow_forward_ios_rounded,
-                  color: kMutedFg, size: 12),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: kMutedFg,
+                size: 12,
+              ),
             ],
           ),
         ),
@@ -1186,7 +1207,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
         'iconColor': kTeal,
         'title': 'New Program: Sales & Negotiation Mastery',
         'body':
-        'Enroll now in our latest program on advanced sales techniques and deal-closing strategies.',
+            'Enroll now in our latest program on advanced sales techniques and deal-closing strategies.',
         'time': '2 hours ago',
         'isNew': true,
       },
@@ -1195,7 +1216,7 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
         'iconColor': kPurple,
         'title': 'System Maintenance Notice',
         'body':
-        'Platform will undergo scheduled maintenance on Sunday, 2 AM - 4 AM EST.',
+            'Platform will undergo scheduled maintenance on Sunday, 2 AM - 4 AM EST.',
         'time': '1 day ago',
         'isNew': false,
       },
@@ -1240,17 +1261,19 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
           ],
         ),
         const SizedBox(height: 14),
-        ...announcements.map((a) => Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: _buildAnnouncementCard(
-            icon: a['icon'] as IconData,
-            iconColor: a['iconColor'] as Color,
-            title: a['title'] as String,
-            body: a['body'] as String,
-            time: a['time'] as String,
-            isNew: a['isNew'] as bool,
+        ...announcements.map(
+          (a) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _buildAnnouncementCard(
+              icon: a['icon'] as IconData,
+              iconColor: a['iconColor'] as Color,
+              title: a['title'] as String,
+              body: a['body'] as String,
+              time: a['time'] as String,
+              isNew: a['isNew'] as bool,
+            ),
           ),
-        )),
+        ),
       ],
     );
   }
@@ -1269,8 +1292,9 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
         color: kCardBg,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-            color: isNew ? kPrimary.withOpacity(0.2) : kBorder,
-            width: isNew ? 1.5 : 1),
+          color: isNew ? kPrimary.withOpacity(0.2) : kBorder,
+          width: isNew ? 1.5 : 1,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1307,7 +1331,9 @@ class _LearnerHomeScreenState extends State<LearnerHomeScreen>
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: kPrimary,
                           borderRadius: BorderRadius.circular(6),
